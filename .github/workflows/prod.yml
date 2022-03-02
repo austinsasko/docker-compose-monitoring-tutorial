@@ -1,0 +1,93 @@
+name: CICD
+
+on: 
+  push:
+      branches:
+        - main
+  workflow_dispatch:
+
+jobs:
+  build_and_deploy_monitoring:
+    concurrency: monitoring
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Save secrets to mon.env files
+        run: |
+          echo "DATA_SOURCE_NAME=${{ secrets.DB_DATASOURCE }}" >> mon.env
+          echo "GF_SECURITY_ADMIN_USER=${{ secrets.GF_ADMIN_USER }}" >> mon.env
+          echo "GF_SECURITY_ADMIN_PASSWORD=${{ secrets.GF_ADMIN_PASS }}" >> mon.env
+          echo "DISCORD_TOKEN=${{ secrets.DISCORD_TOKEN }}" >> mon.env
+          echo "PROMCORD_PREFIX=promcord_" >> mon.env
+          echo "DB_CONNECTION_STRING=${{ secrets.DBC_STRING }}" >> mon.env
+      
+      - name: Setup SSH stuff
+        run: |
+          mkdir -p ~/.ssh/
+          echo "${{ secrets.SSH_KEY }}" >> ~/.ssh/ssh_key
+          chmod 0400 ~/.ssh/ssh_key
+          echo "${{ secrets.KNOWN_HOSTS }}" >> ~/.ssh/known_hosts
+          echo -e "Host ${{ secrets.SSH_HOST }}\n\tHostName ${{ secrets.SSH_HOST }}\n\tUser ${{ secrets.SSH_USER }}\n\tIdentityFile ~/.ssh/ssh_key" >> ~/.ssh/config
+
+      - name: Install docker-compose
+        run: pip install docker-compose
+      
+      - name: Create context for docker host
+        run: docker context create remote --docker "host=ssh://${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:${{ secrets.SSH_PORT }}"
+      
+      - name: Set default context for docker
+        run: docker context use remote
+      
+      - name: Always build the monitoring stack
+        run: COMPOSE_PARAMIKO_SSH=1 COMPOSE_IGNORE_ORPHANS=1 docker-compose --context remote -f docker-compose-monitoring.yml up --build -d
+
+  build_and_deploy_app:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Save secrets to traefik.env files
+        run: |
+          echo "CLOUDFLARE_EMAIL=${{ secrets.CF_EMAIL }}" >> traefik.env
+          echo "CLOUDFLARE_DNS_API_TOKEN=${{ secrets.CF_API_KEY }}" >> traefik.env
+
+      - name: Save secrets to traefik htpasswd file
+        run: echo '${{ secrets.T_HTPASSWD }}' >> traefik/.htpasswd
+      
+      - name: Setup SSH stuff
+        run: |
+          mkdir -p ~/.ssh/
+          echo "${{ secrets.SSH_KEY }}" >> ~/.ssh/ssh_key
+          chmod 0400 ~/.ssh/ssh_key
+          echo "${{ secrets.KNOWN_HOSTS }}" >> ~/.ssh/known_hosts
+          echo -e "Host ${{ secrets.SSH_HOST }}\n\tHostName ${{ secrets.SSH_HOST }}\n\tUser ${{ secrets.SSH_USER }}\n\tIdentityFile ~/.ssh/ssh_key" >> ~/.ssh/config
+     
+      - name: Save secrets to bot.env files
+        run: |
+          echo "DISCORD_TOKEN=${{ secrets.DISCORD_TOKEN }}" >> bot.env
+          echo "DB_USER=${{ secrets.DB_USER }}" >> bot.env
+          echo "DB_PASS=${{ secrets.DB_PASS }}" >> bot.env
+          echo "DB_NAME=${{ secrets.DB_NAME }}" >> bot.env
+        if: github.ref == 'refs/heads/main'
+      
+      - name: Save secrets to db.env files
+        run: |
+          echo "MARIADB_ROOT_PASSWORD=${{ secrets.MYSQL_ROOT_PASSWORD }}" >> db.env
+          echo "MARIADB_DATABASE=${{ secrets.DB_NAME }}" >> db.env
+          echo "MARIADB_USER=${{ secrets.DB_USER }}" >> db.env
+          echo "MARIADB_PASSWORD=${{ secrets.DB_PASS }}" >> db.env
+          echo "TZ=America/New_York" >> db.env
+        if: github.ref == 'refs/heads/main'
+
+      - name: Install docker-compose
+        run: pip install docker-compose
+      
+      - name: Create context for docker host
+        run: docker context create remote --docker "host=ssh://${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:${{ secrets.SSH_PORT }}"
+      
+      - name: Set default context for docker
+        run: docker context use remote
+
+      - name: Build the prod stack
+        run: COMPOSE_PARAMIKO_SSH=1 COMPOSE_IGNORE_ORPHANS=1 docker-compose --context remote up --build -d
+        if: github.ref == 'refs/heads/main'

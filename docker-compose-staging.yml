@@ -1,0 +1,87 @@
+version: "3"
+
+x-logging: &logging
+  logging:
+    driver: loki
+    options:
+      loki-url: http://localhost:3100/loki/api/v1/push
+
+services:
+  mariadb_staging:
+    <<: *logging
+    container_name: mariadb_staging
+    build:
+      context: mariadb/.
+    restart: always
+    volumes:
+      - mysql-data_staging:/var/lib/mysql
+    env_file:
+      - db_staging.env
+    networks:
+      - backend_staging
+    ports:
+      - 3307:3307
+
+  sql_migrations_staging:
+    <<: *logging
+    container_name: sql_migrations_staging
+    build: 
+      context: sql_migrations/.
+      args:
+        STAGING: "true"
+    restart: on-failure:5
+    env_file:
+      - bot_staging.env
+    networks:
+      - backend_staging
+    depends_on:
+      - mariadb_staging
+
+  python_discord_bot_staging:
+    <<: *logging
+    container_name: python_discord_bot_staging
+    build: 
+      context: python_discord_bot/.
+      args: 
+        STAGING: "true"
+    restart: always
+    env_file:
+      - bot_staging.env
+    networks:
+      - backend_staging
+      - world
+    depends_on:
+      - mariadb_staging
+      - sql_migrations_staging
+
+  python_bot_frontend_staging:
+    <<: *logging
+    container_name: python_bot_frontend_staging
+    build: 
+      context: python_flask/.
+      args: 
+        STAGING: "true"
+    restart: always
+    env_file:
+      - bot_staging.env
+    networks:
+      - backend_staging
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.python_bot_frontend_staging.rule=Host(`bot-staging.REPLACE_ME_DOMAIN`)
+      - traefik.http.routers.python_bot_frontend_staging.entrypoints=websecure
+      - traefik.http.routers.python_bot_frontend_staging.tls.certresolver=dockerssl
+      - traefik.http.services.python_bot_frontend_staging.loadbalancer.server.port=5001
+    depends_on:
+      - sql_migrations_staging
+      - mariadb_staging
+
+volumes:
+  mysql-data_staging:
+  db_migrations_staging:
+
+networks:
+  backend_staging:
+    external: true
+  world:
+    external: true

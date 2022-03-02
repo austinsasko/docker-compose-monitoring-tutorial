@@ -1,0 +1,146 @@
+version: '3'
+x-logging: &logging
+  logging:
+    driver: loki
+    options:
+      loki-url: "http://localhost:3100/loki/api/v1/push"
+
+services:
+  mariadb:
+    <<: *logging
+    container_name: mariadb
+    build:
+      context: mariadb/.
+    restart: always
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - /home/mariadb/:/etc/mysql/conf.d/
+    env_file:
+      - db.env
+    networks:
+      - backend_prod
+    ports:
+      - "3306:3306"
+
+  sql_migrations:
+    <<: *logging
+    container_name: sql_migrations
+    build: sql_migrations/.
+    restart: on-failure:5
+    env_file:
+      - bot.env
+    networks:
+      - backend_prod
+    depends_on:
+      - mariadb
+
+  python_discord_bot:
+    <<: *logging
+    container_name: python_discord_bot
+    build: python_discord_bot/.
+    restart: always
+    env_file:
+      - bot.env
+    networks:
+      - backend_prod
+      - world
+    depends_on:
+      - mariadb
+      - sql_migrations
+
+  python_bot_frontend:
+    <<: *logging
+    container_name: python_bot_frontend
+    build: python_flask/.
+    restart: always
+    env_file:
+      - bot.env
+    networks:
+      - backend_prod
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.python_bot_frontend.rule=Host(`bot.REPLACE_ME_DOMAIN`)
+      - traefik.http.routers.python_bot_frontend.entrypoints=websecure
+      - traefik.http.routers.python_bot_frontend.tls.certresolver=dockerssl
+      - traefik.http.services.python_bot_frontend.loadbalancer.server.port=5000
+    depends_on:
+      - mariadb
+      - sql_migrations
+
+  traefik:
+    <<: *logging
+    container_name: traefik
+    build:
+      context: traefik/.
+    restart: always
+    command:
+      - --accesslog=true
+      - --metrics.prometheus=true
+      - --metrics.prometheus.addrouterslabels=true
+      - --metrics.prometheus.entryPoint=metrics
+      - --entryPoints.metrics.address=:5008
+      - --api=true
+      - --api.dashboard=true
+      - --providers.docker=true
+      - --providers.docker.exposedbydefault=false
+      - --entrypoints.web.address=:80
+      - --entrypoints.web.http.redirections.entrypoint.to=websecure
+      - --entrypoints.web.http.redirections.entrypoint.scheme=https
+      - --entrypoints.websecure.address=:443
+      - --entrypoints.websecure.http.tls=true
+      - --entrypoints.websecure.http.tls.certResolver=letsencrypt
+      - --entrypoints.websecure.http.tls.domains[0].main=REPLACE_ME_DOMAIN
+      - --entrypoints.websecure.http.tls.domains[0].sans=*.REPLACE_ME_DOMAIN
+      - --certificatesresolvers.dockerssl.acme.email=REPLACE_ME_CF_EMAIL
+      - --certificatesresolvers.dockerssl.acme.dnschallenge=true
+      - --certificatesresolvers.dockerssl.acme.dnschallenge.delaybeforecheck=0
+      - --certificatesresolvers.dockerssl.acme.dnschallenge.provider=cloudflare
+      - --certificatesresolvers.dockerssl.acme.dnschallenge.resolvers[0]=1.1.1.1:53
+      - --certificatesresolvers.dockerssl.acme.dnschallenge.resolvers[1]=8.8.8.8:53
+      - --certificatesresolvers.dockerssl.acme.storage=/letsencrypt/acme.json
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - certs:/letsencrypt
+    env_file:
+      - traefik.env
+    networks:
+      - backend_staging
+      - backend_prod
+      - world
+    ports:
+      - 80:80
+      - 443:443
+      - 5008:5008
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.traefik.rule=Host(`traefik.REPLACE_ME_DOMAIN`)
+      - traefik.http.routers.traefik.entrypoints=websecure
+      - traefik.http.routers.traefik.tls.certresolver=dockerssl
+      - traefik.http.routers.traefik.service=api@internal
+      - traefik.http.middlewares.main_auth.basicauth.usersfile=/.htpasswd
+
+  whoami:
+    <<: *logging
+    container_name: simple-service
+    image: traefik/whoami
+    networks:
+      - backend_prod
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.whoami.rule=Host(`whoami.REPLACE_ME_DOMAIN`)
+      - traefik.http.routers.whoami.entrypoints=websecure
+      - traefik.http.routers.whoami.tls.certresolver=dockerssl
+      - traefik.http.routers.whoami.middlewares=main_auth
+      - traefik.http.services.whoami.loadbalancer.server.port=80
+
+volumes:
+  mysql-data:
+  certs:
+
+networks:
+  backend_prod:
+    external: true
+  backend_staging:
+    external: true
+  world:
+    external: true

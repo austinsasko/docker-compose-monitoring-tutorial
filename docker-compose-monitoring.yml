@@ -1,0 +1,189 @@
+version: "3"
+
+x-logging: &logging
+  logging:
+    driver: loki
+    options:
+      loki-url: http://localhost:3100/loki/api/v1/push
+
+services:
+  loki:
+    <<: *logging
+    container_name: loki
+    image: grafana/loki:2.4.1
+    restart: always
+    command: -config.file=/etc/loki/local-config.yaml
+    networks:
+      - backend_staging
+      - backend_prod
+      - world
+    ports:
+      - 3100:3100
+
+  promtail:
+    <<: *logging
+    container_name: promtail
+    image: grafana/promtail:2.4.1
+    restart: always
+    volumes:
+      - /var/log:/var/log
+    networks:
+      - backend_staging
+      - backend_prod
+    depends_on:
+      - loki
+
+  prometheus:
+    <<: *logging
+    container_name: prometheus
+    build: 
+      context: prometheus/.
+    restart: always
+    command: >-
+        --config.file=/prometheus.yml
+        --storage.tsdb.path=/prometheus
+        --web.console.libraries=/usr/share/prometheus/console_libraries
+        --web.console.templates=/usr/share/prometheus/consoles
+        --web.enable-lifecycle
+    volumes:
+      - prometheus_data:/prometheus
+    networks:
+      - backend_staging
+      - backend_prod
+      - world
+    extra_hosts:
+      - host.docker.internal:host-gateway
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.prometheus.rule=Host(`prometheus.REPLACE_ME_DOMAIN`)
+      - traefik.http.routers.prometheus.entrypoints=websecure
+      - traefik.http.routers.prometheus.tls.certresolver=dockerssl
+      - traefik.http.services.prometheus.loadbalancer.server.port=9090
+      - traefik.http.routers.prometheus.middlewares=main_auth
+
+  db_exporter:
+    <<: *logging
+    container_name: db_exporter
+    image: prom/mysqld-exporter:latest
+    restart: always
+    env_file:
+      - mon.env
+    networks:
+      - backend_staging
+      - backend_prod
+
+  cadvisor:
+    <<: *logging
+    container_name: cadvisor
+    image: google/cadvisor:v0.33.0
+    restart: always
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+      - /dev/disk/:/dev/disk:ro
+    networks:
+      - default
+      - backend_prod
+      - backend_staging
+
+  promcord:
+    <<: *logging
+    container_name: promcord
+    image: biospheere/promcord
+    restart: always
+    env_file: 
+      - mon.env
+    networks:
+      - backend_staging
+      - backend_prod
+      - world
+    ports:
+      - 9590:8080
+
+  query_exporter:
+    <<: *logging
+    container_name: query_exporter
+    build: 
+      context: query_exporter/.
+    restart: always
+    env_file: 
+      - mon.env
+    networks:
+      - backend_staging
+      - backend_prod
+
+  grafana:
+    <<: *logging
+    container_name: grafana
+    build:
+      context: grafana/.
+    restart: always
+    volumes:
+      - grafana_storage:/var/lib/grafana
+    env_file:
+      - mon.env
+    networks:
+      - backend_staging
+      - backend_prod
+      - world
+    extra_hosts:
+      - host.docker.internal:host-gateway
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.grafana.rule=Host(`grafana.REPLACE_ME_DOMAIN`)
+      - traefik.http.routers.grafana.entrypoints=websecure
+      - traefik.http.routers.grafana.tls.certresolver=dockerssl
+      - traefik.http.services.grafana.loadbalancer.server.port=3000
+
+  alertmanager:
+    <<: *logging
+    container_name: alertmanager
+    build:
+      context: alertmanager/.    
+    restart: always
+    command:
+      - --config.file=/etc/alertmanager/config.yml
+      - --storage.path=/alertmanager
+    networks:
+      - backend_staging
+      - backend_prod
+    ports:
+      - 2086:9093
+    depends_on:
+      - prometheus
+
+  phpmyadmin:
+    <<: *logging
+    container_name: pma
+    image: phpmyadmin/phpmyadmin
+    restart: always
+    environment:
+      PMA_HOST: mariadb
+      PMA_PORT: 3306
+      PMA_ARBITRARY: 1
+    networks:
+      - backend_staging
+      - backend_prod
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.phpmyadmin.rule=Host(`pma.REPLACE_ME_DOMAIN`)
+      - traefik.http.routers.phpmyadmin.entrypoints=websecure
+      - traefik.http.routers.phpmyadmin.tls.certresolver=dockerssl
+      - traefik.http.services.phpmyadmin.loadbalancer.server.port=80
+      - traefik.http.routers.phpmyadmin.middlewares=main_auth
+
+networks:
+  backend_staging:
+    internal: true
+    name: backend_staging
+  backend_prod:
+    internal: true
+    name: backend_prod
+  world:
+    name: world
+
+volumes:
+  prometheus_data:
+  grafana_storage:

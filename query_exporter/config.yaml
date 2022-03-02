@@ -1,0 +1,16 @@
+databases:
+  REPLACE_ME_DB_NAME:
+    dsn: env:DB_CONNECTION_STRING
+
+metrics:
+  metric1:
+    type: gauge
+    description: Example columns
+    labels: [example_column1, exampl_column2]
+
+queries:
+  query1:
+    interval: 60
+    databases: [REPLACE_ME_DB_NAME]
+    metrics: [metric1]
+    sql: SELECT example_column1, example_column2, COUNT(*) AS metric1 FROM example_table GROUP BY example_column1, example_column2 ORDER BY COUNT(*) DESC
