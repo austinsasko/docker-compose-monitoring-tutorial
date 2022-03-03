@@ -4,7 +4,7 @@ x-logging: &logging
   logging:
     driver: loki
     options:
-      loki-url: http://localhost:3100/loki/api/v1/push
+      loki-url: http://host.docker.internal:3100:3100/loki/api/v1/push
 
 services:
   mariadb_staging:
@@ -19,8 +19,6 @@ services:
       - db_staging.env
     networks:
       - backend_staging
-    ports:
-      - 3307:3307
 
   sql_migrations_staging:
     <<: *logging

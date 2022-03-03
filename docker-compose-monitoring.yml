@@ -4,7 +4,7 @@ x-logging: &logging
   logging:
     driver: loki
     options:
-      loki-url: http://localhost:3100/loki/api/v1/push
+      loki-url: http://host.docker.internal:3100:3100/loki/api/v1/push
 
 services:
   loki:
@@ -99,8 +99,6 @@ services:
       - backend_staging
       - backend_prod
       - world
-    ports:
-      - 9590:8080
 
   query_exporter:
     <<: *logging
@@ -149,8 +147,6 @@ services:
     networks:
       - backend_staging
       - backend_prod
-    ports:
-      - 2086:9093
     depends_on:
       - prometheus
 

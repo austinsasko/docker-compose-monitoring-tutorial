@@ -33,7 +33,7 @@ function get_input () {
     else
         STAGING=false
     fi
-    read -p 'Discord Token (https://www.writebots.com/discord-bot-token/): ' DISCORD_TOKEN
+    read -p 'Discord Token (https://www.writebots.com/discord-bot-token/#generating_your_token_step-by-step): ' DISCORD_TOKEN
     if $STAGING; then
         read -p 'Staging Discord Token (enter same token as prod if you do not have a staging Discord server): ' STAGING_DISCORD_TOKEN
     fi
@@ -143,11 +143,13 @@ function install_config_packages () {
     ssh $HOST_OR_IP -l $SSH_USER -p $SSH_PORT "systemctl start docker"
     ssh $HOST_OR_IP -l $SSH_USER -p $SSH_PORT "systemctl start fail2ban"
     ssh $HOST_OR_IP -l $SSH_USER -p $SSH_PORT "docker plugin install grafana/loki-docker-driver:latest --alias loki --grant-all-permissions"
-    ssh $HOST_OR_IP -l $SSH_USER -p $SSH_PORT "sed -i /etc/ssh/sshd_config 's/#MaxSessions 10/MaxSessions 30/g'"
+    ssh $HOST_OR_IP -l $SSH_USER -p $SSH_PORT "sed -i /etc/ssh/sshd_config 's/\#MaxSessions 10/MaxSessions 30/g'"
     ssh $HOST_OR_IP -l $SSH_USER -p $SSH_PORT "systemctl restart sshd"
 }
 
 function configure_local () {
+    docker context create remote --docker "host=ssh://$SSH_USER@$HOST_OR_IP:$SSH_PORT"
+    docker context use remote
     find . \( -type d -name .git -prune \) -o -type f ! -name client.sh -print0 | xargs -0 sed -i "s/REPLACE_ME_DISCORD_TOKEN/$DISCORD_TOKEN/g"
     find . \( -type d -name .git -prune \) -o -type f ! -name client.sh -print0 | xargs -0 sed -i "s/REPLACE_ME_DB_NAME/$DB_NAME/g"
     find . \( -type d -name .git -prune \) -o -type f ! -name client.sh -print0 | xargs -0 sed -i "s/REPLACE_ME_DB_USER/$DB_USER/g"

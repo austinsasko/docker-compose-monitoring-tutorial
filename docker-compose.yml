@@ -3,7 +3,7 @@ x-logging: &logging
   logging:
     driver: loki
     options:
-      loki-url: "http://localhost:3100/loki/api/v1/push"
+      loki-url: "http://host.docker.internal:3100:3100/loki/api/v1/push"
 
 services:
   mariadb:
@@ -19,8 +19,6 @@ services:
       - db.env
     networks:
       - backend_prod
-    ports:
-      - "3306:3306"
 
   sql_migrations:
     <<: *logging
@@ -63,6 +61,7 @@ services:
       - traefik.http.routers.python_bot_frontend.entrypoints=websecure
       - traefik.http.routers.python_bot_frontend.tls.certresolver=dockerssl
       - traefik.http.services.python_bot_frontend.loadbalancer.server.port=5000
+      - traefik.http.routers.python_bot_frontend.middlewares=main_auth
     depends_on:
       - mariadb
       - sql_migrations
@@ -112,12 +111,13 @@ services:
       - 443:443
       - 5008:5008
     labels:
+      - traefik.http.middlewares.main_auth.basicauth.usersfile=/.htpasswd
       - traefik.enable=true
       - traefik.http.routers.traefik.rule=Host(`traefik.REPLACE_ME_DOMAIN`)
       - traefik.http.routers.traefik.entrypoints=websecure
       - traefik.http.routers.traefik.tls.certresolver=dockerssl
       - traefik.http.routers.traefik.service=api@internal
-      - traefik.http.middlewares.main_auth.basicauth.usersfile=/.htpasswd
+      - traefik.http.routers.traefik.middlewares=main_auth
 
   whoami:
     <<: *logging
