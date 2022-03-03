@@ -24,7 +24,7 @@ async def get_discord_id(message):
 async def daily_ping():
     if os.getenv("STAGING"): #dont do this in staging
         return
-    channel_id = 123 #Channel ID of channel to post this message in
+    channel_id = 907489456007807009 #Channel ID of channel to post this message in
     send_message("Daily ping", channel_id)
 
 #GENERIC STUFF
