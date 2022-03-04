@@ -19,13 +19,11 @@ function gen_alphanumeric () {
 
 function get_input () {
     echo "You will now be asked for information to help us configure your system for docker compose. Press enter to use the default value in []."
-    read -p 'Host / IP: ' HOST_OR_IP
-    read -p 'SSH Username [root]: ' SSH_USER
-    SSH_USER=${SSH_USER:-root}
-    read -p 'SSH Port [22]: ' SSH_PORT
-    SSH_PORT=${SSH_PORT:-22}
-    read -p 'Main Domain: ' DOMAIN
     read -p 'Do you want a staging env - recommended [y]: ' STAGING
+    read -p 'Registered domain in Cloudflare (Will access containers on this): ' DOMAIN
+    read -p 'Cloudflare Email Address: ' CF_EMAIL
+    read -p 'Cloudflare API Key (needs DNS access) (https://developers.cloudflare.com/api/tokens/create/): ' CF_API_KEY
+    read -p 'Discord Token (https://www.writebots.com/discord-bot-token/#generating_your_token_step-by-step): ' DISCORD_TOKEN
     STAGING=${STAGING:-y}
     AUTO_CHECK=$(echo "${STAGING:0:1}" | tr '[:upper:]' '[:lower:]')
     if [ "$STAGING" == "y" ]; then
@@ -33,26 +31,28 @@ function get_input () {
     else
         STAGING=false
     fi
-    read -p 'Discord Token (https://www.writebots.com/discord-bot-token/#generating_your_token_step-by-step): ' DISCORD_TOKEN
     if $STAGING; then
         read -p 'Staging Discord Token (enter same token as prod if you do not have a staging Discord server): ' STAGING_DISCORD_TOKEN
     fi
-    read -p 'Cloudflare Email Address: ' CF_EMAIL
-    read -p 'Cloudflare API Key (needs DNS access) (https://developers.cloudflare.com/api/tokens/create/): ' CF_API_KEY
+    read -p 'SSH Host / IP: ' HOST_OR_IP
+    read -p 'SSH Username [root]: ' SSH_USER
+    SSH_USER=${SSH_USER:-root}
+    read -p 'SSH Port [22]: ' SSH_PORT
+    SSH_PORT=${SSH_PORT:-22}
     read -p 'Would you like me to generate all remaining parameters (datatabase name, DB & Grafana username, DB & Grafana pass, and HTPASSWD values)? [y]: ' AUTO
     AUTO=${AUTO:-y}
     AUTO_CHECK=$(echo "${AUTO:0:1}" | tr '[:upper:]' '[:lower:]')
     if [ "$AUTO" == "y" ]; then
-        DB_NAME=$(gen_alphanumeric 4)
+        DB_NAME=$(gen_alphanumeric 7)
         DB_NAME="dbn_$DB_NAME"
-        DB_USER=$(gen_alphanumeric 4)
+        DB_USER=$(gen_alphanumeric 7)
         DB_USER="dbu_$DB_USER"
         DB_PASS=$(gen_alphanumeric)
         DB_ROOT_PASS=$(gen_alphanumeric)
-        GRAFANA_USER=$(gen_alphanumeric 4)
+        GRAFANA_USER=$(gen_alphanumeric 7)
         GRAFANA_USER="graf_$GRAFANA_USER"
         GRAFANA_PASS=$(gen_alphanumeric)
-        HT_USER=$(gen_alphanumeric 4)
+        HT_USER=$(gen_alphanumeric 7)
         HT_USER="ht_$HT_USER"
         HT_PASS=$(gen_alphanumeric)
         EXPORTER_PASS=$(gen_alphanumeric)
@@ -85,13 +85,18 @@ function get_input () {
 }
 
 function ssh_key_and_config () {
-    mv ~/.ssh/config ~/.ssh/config.bak
+    mv ~/.ssh/config ~/.ssh/config.bak 2>/dev/null
     KNOWN_HOSTS=$(ssh-keyscan -H $HOST_OR_IP 2>&1)
     echo "$KNOWN_HOSTS" >> ~/.ssh/known_hosts 
     ssh-keygen -t rsa -b 4096 -C "docker_compose_client_script" -N "" -f ~/.ssh/docker_compose_host
     SSH_KEY=$(cat ~/.ssh/docker_compose_host)
     PUB_KEY=$(cat ~/.ssh/docker_compose_host.pub)
     ssh $HOST_OR_IP -l $SSH_USER -p $SSH_PORT "echo $PUB_KEY >> ~/.ssh/authorized_keys"
+    if [ $? -ne 0 ]; then
+        echo "Initial SSH attempt unsuccessful. Please read the Pre-reqs section in the README.md file."
+        echo "Make sure PasswordAuth is set to yes on the remote server SSH config"
+        exit 1
+    fi
     echo "Setting SSH to use the generated keys in the future"
     echo "Host docker-compose
         HostName $HOST_OR_IP
@@ -139,7 +144,7 @@ function install_config_packages () {
     ssh $HOST_OR_IP -l $SSH_USER -p $SSH_PORT "systemctl start docker"
     ssh $HOST_OR_IP -l $SSH_USER -p $SSH_PORT "systemctl start fail2ban"
     ssh $HOST_OR_IP -l $SSH_USER -p $SSH_PORT "docker plugin install grafana/loki-docker-driver:latest --alias loki --grant-all-permissions"
-    ssh $HOST_OR_IP -l $SSH_USER -p $SSH_PORT 'sed -i /etc/ssh/sshd_config "s/\#MaxSessions 10/MaxSessions 30/g"'
+    ssh $HOST_OR_IP -l $SSH_USER -p $SSH_PORT "sed -i 's|#MaxSessions 10|MaxSessions 30|g' /etc/ssh/sshd_config"
     ssh $HOST_OR_IP -l $SSH_USER -p $SSH_PORT "systemctl restart sshd"
 }
 
@@ -148,30 +153,30 @@ function configure_local () {
     for file in *.example; do
         cp -- "$file" "${file%%.example}"
     done
-    docker context rm docker_compose_tut
+    docker context rm docker_compose_tut -f 2>/dev/null
     docker context create docker_compose_tut --docker "host=ssh://$SSH_USER@$HOST_OR_IP:$SSH_PORT"
     docker context use docker_compose_tut
-    find . \( -type d -name .git -prune \) -o -type f ! -name client.sh ! -name *.example -print0 | xargs -0 sed -i "s/REPLACE_ME_DISCORD_TOKEN/$DISCORD_TOKEN/g"
-    find . \( -type d -name .git -prune \) -o -type f ! -name client.sh ! -name *.example -print0 | xargs -0 sed -i "s/REPLACE_ME_DB_NAME/$DB_NAME/g"
-    find . \( -type d -name .git -prune \) -o -type f ! -name client.sh ! -name *.example -print0 | xargs -0 sed -i "s/REPLACE_ME_DB_USER/$DB_USER/g"
-    find . \( -type d -name .git -prune \) -o -type f ! -name client.sh ! -name *.example -print0 | xargs -0 sed -i "s/REPLACE_ME_DB_USER_PASS/$DB_PASS/g"
-    find . \( -type d -name .git -prune \) -o -type f ! -name client.sh ! -name *.example -print0 | xargs -0 sed -i "s/REPLACE_ME_DB_ROOT_PASS/$DB_ROOT_PASS/g"
-    find . \( -type d -name .git -prune \) -o -type f ! -name client.sh ! -name *.example -print0 | xargs -0 sed -i "s/REPLACE_ME_DOMAIN/$DOMAIN/g"
-    find . \( -type d -name .git -prune \) -o -type f ! -name client.sh ! -name *.example -print0 | xargs -0 sed -i "s/REPLACE_ME_CF_EMAIL/$CF_EMAIL/g"
-    find . \( -type d -name .git -prune \) -o -type f ! -name client.sh ! -name *.example -print0 | xargs -0 sed -i "s/REPLACE_ME_CF_DNS_API_TOKEN/$CF_API_KEY/g"
-    find . \( -type d -name .git -prune \) -o -type f ! -name client.sh ! -name *.example -print0 | xargs -0 sed -i "s/REPLACE_ME_WEB_AUTH_USER/$HT_USER/g"
-    find . \( -type d -name .git -prune \) -o -type f ! -name client.sh ! -name *.example -print0 | xargs -0 sed -i "s/REPLACE_ME_WEB_AUTH_BCRYPT_PASSWORD/$ENC_HTPASS/g"
-    find . \( -type d -name .git -prune \) -o -type f ! -name client.sh ! -name *.example -print0 | xargs -0 sed -i "s/REPLACE_ME_GRAFANA_USER/$GRAFANA_USER/g"
-    find . \( -type d -name .git -prune \) -o -type f ! -name client.sh ! -name *.example -print0 | xargs -0 sed -i "s/REPLACE_ME_GRAFANA_PASS/$GRAFANA_PASS/g"
-    find . \( -type d -name .git -prune \) -o -type f ! -name client.sh ! -name *.example -print0 | xargs -0 sed -i "s/REPLACE_ME_DATASOURCE_NAME/$DATA_SOURCE_NAME/g"
-    find . \( -type d -name .git -prune \) -o -type f ! -name client.sh ! -name *.example -print0 | xargs -0 sed -i "s/REPLACE_ME_DBC_STRING/$DB_CONNECTION_STRING/g"
+    find . \( -type d -name .git -prune \) -o -type f ! -name configure.sh ! -name "*.example" -print0 | xargs -0 sed -i "s|REPLACE_ME_DISCORD_TOKEN|$DISCORD_TOKEN|g"
+    find . \( -type d -name .git -prune \) -o -type f ! -name configure.sh ! -name "*.example" -print0 | xargs -0 sed -i "s|REPLACE_ME_DB_NAME|$DB_NAME|g"
+    find . \( -type d -name .git -prune \) -o -type f ! -name configure.sh ! -name "*.example" -print0 | xargs -0 sed -i "s|REPLACE_ME_DB_USER_PASS|$DB_PASS|g"
+    find . \( -type d -name .git -prune \) -o -type f ! -name configure.sh ! -name "*.example" -print0 | xargs -0 sed -i "s|REPLACE_ME_DB_USER|$DB_USER|g"
+    find . \( -type d -name .git -prune \) -o -type f ! -name configure.sh ! -name "*.example" -print0 | xargs -0 sed -i "s|REPLACE_ME_DB_ROOT_PASS|$DB_ROOT_PASS|g"
+    find . \( -type d -name .git -prune \) -o -type f ! -name configure.sh ! -name "*.example" -print0 | xargs -0 sed -i "s|REPLACE_ME_DOMAIN|$DOMAIN|g"
+    find . \( -type d -name .git -prune \) -o -type f ! -name configure.sh ! -name "*.example" -print0 | xargs -0 sed -i "s|REPLACE_ME_CF_EMAIL|$CF_EMAIL|g"
+    find . \( -type d -name .git -prune \) -o -type f ! -name configure.sh ! -name "*.example" -print0 | xargs -0 sed -i "s|REPLACE_ME_CF_DNS_API_TOKEN|$CF_API_KEY|g"
+    find . \( -type d -name .git -prune \) -o -type f ! -name configure.sh ! -name "*.example" -print0 | xargs -0 sed -i "s|REPLACE_ME_WEB_AUTH_USER|$HT_USER|g"
+    find . \( -type d -name .git -prune \) -o -type f ! -name configure.sh ! -name "*.example" -print0 | xargs -0 sed -i "s|REPLACE_ME_WEB_AUTH_BCRYPT_PASSWORD|$ENC_HTPASS|g"
+    find . \( -type d -name .git -prune \) -o -type f ! -name configure.sh ! -name "*.example" -print0 | xargs -0 sed -i "s|REPLACE_ME_GRAFANA_USER|$GRAFANA_USER|g"
+    find . \( -type d -name .git -prune \) -o -type f ! -name configure.sh ! -name "*.example" -print0 | xargs -0 sed -i "s|REPLACE_ME_GRAFANA_PASS|$GRAFANA_PASS|g"
+    find . \( -type d -name .git -prune \) -o -type f ! -name configure.sh ! -name "*.example" -print0 | xargs -0 sed -i "s|REPLACE_ME_DATASOURCE_NAME|$DATA_SOURCE_NAME|g"
+    find . \( -type d -name .git -prune \) -o -type f ! -name configure.sh ! -name "*.example" -print0 | xargs -0 sed -i "s|REPLACE_ME_DBC_STRING|$DB_CONNECTION_STRING|g"
     if $STAGING; then
-        find . \( -type d -name .git -prune \) -o -type f ! -name client.sh ! -name *.example -print0 | xargs -0 sed -i "s/REPLACE_ME_DISCORD_STAGING_TOKEN/$STAGING_DISCORD_TOKEN/g"
-        find . \( -type d -name .git -prune \) -o -type f ! -name client.sh ! -name *.example -print0 | xargs -0 sed -i "s/REPLACE_ME_DB_STAGING_NAME/$DB_STAGING_NAME/g"
-        find . \( -type d -name .git -prune \) -o -type f ! -name client.sh ! -name *.example -print0 | xargs -0 sed -i "s/REPLACE_ME_DB_STAGING_USER_PASS/$DB_STAGING_PASS/g"
-        find . \( -type d -name .git -prune \) -o -type f ! -name client.sh ! -name *.example -print0 | xargs -0 sed -i "s/REPLACE_ME_DB_STAGING_USER/$DB_STAGING_USER/g"
-        find . \( -type d -name .git -prune \) -o -type f ! -name client.sh ! -name *.example -print0 | xargs -0 sed -i "s/REPLACE_ME_DB_STAGING_ROOT_PASS/$DB_STAGING_ROOT_PASS/g"
-        find . \( -type d -name .git -prune \) -o -type f ! -name client.sh ! -name *.example -print0 | xargs -0 sed -i "s/REPLACE_ME_DB_STAGING_PORT/$DB_STAGING_PORT/g"
+        find . \( -type d -name .git -prune \) -o -type f ! -name configure.sh ! -name "*.example" -print0 | xargs -0 sed -i "s|REPLACE_ME_DISCORD_STAGING_TOKEN|$STAGING_DISCORD_TOKEN|g"
+        find . \( -type d -name .git -prune \) -o -type f ! -name configure.sh ! -name "*.example" -print0 | xargs -0 sed -i "s|REPLACE_ME_DB_STAGING_NAME|$DB_STAGING_NAME|g"
+        find . \( -type d -name .git -prune \) -o -type f ! -name configure.sh ! -name "*.example" -print0 | xargs -0 sed -i "s|REPLACE_ME_DB_STAGING_USER_PASS|$DB_STAGING_PASS|g"
+        find . \( -type d -name .git -prune \) -o -type f ! -name configure.sh ! -name "*.example" -print0 | xargs -0 sed -i "s|REPLACE_ME_DB_STAGING_USER|$DB_STAGING_USER|g"
+        find . \( -type d -name .git -prune \) -o -type f ! -name configure.sh ! -name "*.example" -print0 | xargs -0 sed -i "s|REPLACE_ME_DB_STAGING_ROOT_PASS|$DB_STAGING_ROOT_PASS|g"
+        find . \( -type d -name .git -prune \) -o -type f ! -name configure.sh ! -name "*.example" -print0 | xargs -0 sed -i "s|REPLACE_ME_DB_STAGING_PORT|$DB_STAGING_PORT|g"
         rm -f .github/workflows/prod.yml
     else
         rm -f bot_staging.env
@@ -207,7 +212,7 @@ function print_creds () {
     echo -e "\n-- ACTION REQUIRED --"
     echo "If you want a fully functional automated GH Workflow (CICD), add the following secrets to the repo"
     echo -e "Secret Name: KNOWN_HOSTS\nSecret Value: \n$KNOWN_HOSTS"
-    echo -e "Secret Name: SSH_KEY\nSecret Value: $SSH_KEY"
+    echo -e "Secret Name: SSH_KEY\nSecret Value: \n$SSH_KEY"
     echo -e "Secret Name: CF_API_KEY\nSecret Value: $CF_API_KEY"
     echo -e "Secret Name: CF_EMAIL\nSecret Value: $CF_EMAIL"
     echo -e "Secret Name: DB_DATASOURCE\nSecret Value: $DATA_SOURCE_NAME"
