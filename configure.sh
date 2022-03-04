@@ -144,30 +144,34 @@ function install_config_packages () {
 }
 
 function configure_local () {
+    rm -f bot_staging.env bot.env db_staging.env db.env mon.env traefik.env
+    for file in *.example; do
+        cp -- "$file" "${file%%.example}"
+    done
     docker context rm docker_compose_tut
     docker context create docker_compose_tut --docker "host=ssh://$SSH_USER@$HOST_OR_IP:$SSH_PORT"
     docker context use docker_compose_tut
-    find . \( -type d -name .git -prune \) -o -type f ! -name client.sh -print0 | xargs -0 sed -i "s/REPLACE_ME_DISCORD_TOKEN/$DISCORD_TOKEN/g"
-    find . \( -type d -name .git -prune \) -o -type f ! -name client.sh -print0 | xargs -0 sed -i "s/REPLACE_ME_DB_NAME/$DB_NAME/g"
-    find . \( -type d -name .git -prune \) -o -type f ! -name client.sh -print0 | xargs -0 sed -i "s/REPLACE_ME_DB_USER/$DB_USER/g"
-    find . \( -type d -name .git -prune \) -o -type f ! -name client.sh -print0 | xargs -0 sed -i "s/REPLACE_ME_DB_USER_PASS/$DB_PASS/g"
-    find . \( -type d -name .git -prune \) -o -type f ! -name client.sh -print0 | xargs -0 sed -i "s/REPLACE_ME_DB_ROOT_PASS/$DB_ROOT_PASS/g"
-    find . \( -type d -name .git -prune \) -o -type f ! -name client.sh -print0 | xargs -0 sed -i "s/REPLACE_ME_DOMAIN/$DOMAIN/g"
-    find . \( -type d -name .git -prune \) -o -type f ! -name client.sh -print0 | xargs -0 sed -i "s/REPLACE_ME_CF_EMAIL/$CF_EMAIL/g"
-    find . \( -type d -name .git -prune \) -o -type f ! -name client.sh -print0 | xargs -0 sed -i "s/REPLACE_ME_CF_DNS_API_TOKEN/$CF_API_KEY/g"
-    find . \( -type d -name .git -prune \) -o -type f ! -name client.sh -print0 | xargs -0 sed -i "s/REPLACE_ME_WEB_AUTH_USER/$HT_USER/g"
-    find . \( -type d -name .git -prune \) -o -type f ! -name client.sh -print0 | xargs -0 sed -i "s/REPLACE_ME_WEB_AUTH_BCRYPT_PASSWORD/$ENC_HTPASS/g"
-    find . \( -type d -name .git -prune \) -o -type f ! -name client.sh -print0 | xargs -0 sed -i "s/REPLACE_ME_GRAFANA_USER/$GRAFANA_USER/g"
-    find . \( -type d -name .git -prune \) -o -type f ! -name client.sh -print0 | xargs -0 sed -i "s/REPLACE_ME_GRAFANA_PASS/$GRAFANA_PASS/g"
-    find . \( -type d -name .git -prune \) -o -type f ! -name client.sh -print0 | xargs -0 sed -i "s/REPLACE_ME_DATASOURCE_NAME/$DATA_SOURCE_NAME/g"
-    find . \( -type d -name .git -prune \) -o -type f ! -name client.sh -print0 | xargs -0 sed -i "s/REPLACE_ME_DBC_STRING/$DB_CONNECTION_STRING/g"
+    find . \( -type d -name .git -prune \) -o -type f ! -name client.sh ! -name *.example -print0 | xargs -0 sed -i "s/REPLACE_ME_DISCORD_TOKEN/$DISCORD_TOKEN/g"
+    find . \( -type d -name .git -prune \) -o -type f ! -name client.sh ! -name *.example -print0 | xargs -0 sed -i "s/REPLACE_ME_DB_NAME/$DB_NAME/g"
+    find . \( -type d -name .git -prune \) -o -type f ! -name client.sh ! -name *.example -print0 | xargs -0 sed -i "s/REPLACE_ME_DB_USER/$DB_USER/g"
+    find . \( -type d -name .git -prune \) -o -type f ! -name client.sh ! -name *.example -print0 | xargs -0 sed -i "s/REPLACE_ME_DB_USER_PASS/$DB_PASS/g"
+    find . \( -type d -name .git -prune \) -o -type f ! -name client.sh ! -name *.example -print0 | xargs -0 sed -i "s/REPLACE_ME_DB_ROOT_PASS/$DB_ROOT_PASS/g"
+    find . \( -type d -name .git -prune \) -o -type f ! -name client.sh ! -name *.example -print0 | xargs -0 sed -i "s/REPLACE_ME_DOMAIN/$DOMAIN/g"
+    find . \( -type d -name .git -prune \) -o -type f ! -name client.sh ! -name *.example -print0 | xargs -0 sed -i "s/REPLACE_ME_CF_EMAIL/$CF_EMAIL/g"
+    find . \( -type d -name .git -prune \) -o -type f ! -name client.sh ! -name *.example -print0 | xargs -0 sed -i "s/REPLACE_ME_CF_DNS_API_TOKEN/$CF_API_KEY/g"
+    find . \( -type d -name .git -prune \) -o -type f ! -name client.sh ! -name *.example -print0 | xargs -0 sed -i "s/REPLACE_ME_WEB_AUTH_USER/$HT_USER/g"
+    find . \( -type d -name .git -prune \) -o -type f ! -name client.sh ! -name *.example -print0 | xargs -0 sed -i "s/REPLACE_ME_WEB_AUTH_BCRYPT_PASSWORD/$ENC_HTPASS/g"
+    find . \( -type d -name .git -prune \) -o -type f ! -name client.sh ! -name *.example -print0 | xargs -0 sed -i "s/REPLACE_ME_GRAFANA_USER/$GRAFANA_USER/g"
+    find . \( -type d -name .git -prune \) -o -type f ! -name client.sh ! -name *.example -print0 | xargs -0 sed -i "s/REPLACE_ME_GRAFANA_PASS/$GRAFANA_PASS/g"
+    find . \( -type d -name .git -prune \) -o -type f ! -name client.sh ! -name *.example -print0 | xargs -0 sed -i "s/REPLACE_ME_DATASOURCE_NAME/$DATA_SOURCE_NAME/g"
+    find . \( -type d -name .git -prune \) -o -type f ! -name client.sh ! -name *.example -print0 | xargs -0 sed -i "s/REPLACE_ME_DBC_STRING/$DB_CONNECTION_STRING/g"
     if $STAGING; then
-        find . \( -type d -name .git -prune \) -o -type f ! -name client.sh -print0 | xargs -0 sed -i "s/REPLACE_ME_DISCORD_STAGING_TOKEN/$STAGING_DISCORD_TOKEN/g"
-        find . \( -type d -name .git -prune \) -o -type f ! -name client.sh -print0 | xargs -0 sed -i "s/REPLACE_ME_DB_STAGING_NAME/$DB_STAGING_NAME/g"
-        find . \( -type d -name .git -prune \) -o -type f ! -name client.sh -print0 | xargs -0 sed -i "s/REPLACE_ME_DB_STAGING_USER/$DB_STAGING_USER/g"
-        find . \( -type d -name .git -prune \) -o -type f ! -name client.sh -print0 | xargs -0 sed -i "s/REPLACE_ME_DB_STAGING_USER_PASS/$DB_STAGING_PASS/g"
-        find . \( -type d -name .git -prune \) -o -type f ! -name client.sh -print0 | xargs -0 sed -i "s/REPLACE_ME_STAGING_ROOT_PASS/$DB_STAGING_ROOT_PASS/g"
-        find . \( -type d -name .git -prune \) -o -type f ! -name client.sh -print0 | xargs -0 sed -i "s/REPLACE_ME_STAGING_DB_PORT/$DB_STAGING_PORT/g"
+        find . \( -type d -name .git -prune \) -o -type f ! -name client.sh ! -name *.example -print0 | xargs -0 sed -i "s/REPLACE_ME_DISCORD_STAGING_TOKEN/$STAGING_DISCORD_TOKEN/g"
+        find . \( -type d -name .git -prune \) -o -type f ! -name client.sh ! -name *.example -print0 | xargs -0 sed -i "s/REPLACE_ME_DB_STAGING_NAME/$DB_STAGING_NAME/g"
+        find . \( -type d -name .git -prune \) -o -type f ! -name client.sh ! -name *.example -print0 | xargs -0 sed -i "s/REPLACE_ME_DB_STAGING_USER_PASS/$DB_STAGING_PASS/g"
+        find . \( -type d -name .git -prune \) -o -type f ! -name client.sh ! -name *.example -print0 | xargs -0 sed -i "s/REPLACE_ME_DB_STAGING_USER/$DB_STAGING_USER/g"
+        find . \( -type d -name .git -prune \) -o -type f ! -name client.sh ! -name *.example -print0 | xargs -0 sed -i "s/REPLACE_ME_DB_STAGING_ROOT_PASS/$DB_STAGING_ROOT_PASS/g"
+        find . \( -type d -name .git -prune \) -o -type f ! -name client.sh ! -name *.example -print0 | xargs -0 sed -i "s/REPLACE_ME_DB_STAGING_PORT/$DB_STAGING_PORT/g"
         rm -f .github/workflows/prod.yml
     else
         rm -f bot_staging.env

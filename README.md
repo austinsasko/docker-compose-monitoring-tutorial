@@ -9,8 +9,10 @@
 ## Instructions
 1. Run ./configure.sh and follow the script steps and save the outputted credentials somewhere safe
 1. Create the GH secrets that the script asks you to
-1. (optional) Commit the changes on your local machine that the configure.sh made and push them to remote and see Github automatically create your docker-compose stack
-1. If you would rather manually make the stack rather than let Github CICD make it, just run the following, replacing REPLACE_ME_FILE with the 3 names of the docker-compose*.yml files in the root directory of this repo `docker compose -f REPLACE_ME_FILE.yml up -d`
+1. Commit and push the changes that the configure.sh made. See Github automatically create your docker-compose stack
+1. If you would rather manually make the stack rather than let Github CICD make it, just run the following: `docker compose -f docker-compose-monitoring.yml up -d`
+`docker compose -f docker-compose-staging.yml up -d`
+`docker compose -f docker-compose.yml up -d`
 
 Or if you are unable or prefer not to run the script
 (Steps are a WIP)
