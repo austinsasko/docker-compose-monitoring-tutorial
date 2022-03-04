@@ -94,6 +94,16 @@ jobs:
           echo "TZ=America/New_York" >> db${{ env.STAGING_SUFFIX }}.env
         if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/staging'
 
+      - name: Save db init scripts
+        run: |
+          echo "USE ${{ secrets.DB_NAME }}" >> mariadb/initscripts/user.sql
+          echo "CREATE USER 'exporter'@'db_exporter' IDENTIFIED BY '${{ secrets.EXPORTER_PASSWORD }}' WITH MAX_USER_CONNECTIONS 2;" >> mariadb/initscripts/user.sql
+          echo "GRANT PROCESS, REPLICATION CLIENT, SELECT ON *.* TO 'exporter'@'db_exporter';" >> mariadb/initscripts/user.sql
+          echo "FLUSH PRIVILEGES;" >> mariadb/initscripts/user.sql
+          echo "USE ${{ secrets.DB_NAME }}" >> mariadb/initscripts/table.sql
+          echo "CREATE TABLE IF NOT EXISTS example_table (example_column1 INT(15), example_column2 INT(15));" >> mariadb/initscripts/table.sql
+          echo "INSERT INTO example_table VALUES (1, 2), (3, 4), (1, 5);" >> mariadb/initscripts/table.sql
+
       - name: Install docker-compose
         run: pip install docker-compose
       

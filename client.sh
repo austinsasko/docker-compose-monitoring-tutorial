@@ -160,7 +160,7 @@ function configure_local () {
     find . \( -type d -name .git -prune \) -o -type f ! -name client.sh -print0 | xargs -0 sed -i "s/REPLACE_ME_GRAFANA_USER/$GRAFANA_USER/g"
     find . \( -type d -name .git -prune \) -o -type f ! -name client.sh -print0 | xargs -0 sed -i "s/REPLACE_ME_GRAFANA_PASS/$GRAFANA_PASS/g"
     find . \( -type d -name .git -prune \) -o -type f ! -name client.sh -print0 | xargs -0 sed -i "s/REPLACE_ME_DATASOURCE_NAME/$DATA_SOURCE_NAME/g"
-    find . \( -type d -name .git -prune \) -o -type f ! -name client.sh -print0 | xargs -0 sed -i "s/REPLACE_ME_DBC_STRING/$DB_CONNECTION_STRING/g"    
+    find . \( -type d -name .git -prune \) -o -type f ! -name client.sh -print0 | xargs -0 sed -i "s/REPLACE_ME_DBC_STRING/$DB_CONNECTION_STRING/g"
     if $STAGING; then
         find . \( -type d -name .git -prune \) -o -type f ! -name client.sh -print0 | xargs -0 sed -i "s/REPLACE_ME_DISCORD_STAGING_TOKEN/$STAGING_DISCORD_TOKEN/g"
         find . \( -type d -name .git -prune \) -o -type f ! -name client.sh -print0 | xargs -0 sed -i "s/REPLACE_ME_DB_STAGING_NAME/$DB_STAGING_NAME/g"
