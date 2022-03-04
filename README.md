@@ -8,11 +8,13 @@
 
 ## Instructions
 1. Run ./configure.sh and follow the script steps and save the outputted credentials somewhere safe
+1. If you would like to skip the Github/Automation/CICD configuration for testing, feel free to skip the next 2 steps.
 1. Create the GH secrets that the script asks you to
 1. Commit and push the changes that the configure.sh made. See Github automatically create your docker-compose stack
-1. If you would rather manually make the stack rather than let Github CICD make it, just run the following: `docker compose -f docker-compose-monitoring.yml up -d`
-`docker compose -f docker-compose-staging.yml up -d`
-`docker compose -f docker-compose.yml up -d`
+1. If you would rather manually make the stack rather than let Github CICD make it, just run the following:
+`docker-compose -f docker-compose-monitoring.yml up -d --build`
+`docker-compose -f docker-compose-staging.yml up -d --build`
+`docker-compose -f docker-compose.yml up -d --build`
 
 Or if you are unable or prefer not to run the script
 (Steps are a WIP)

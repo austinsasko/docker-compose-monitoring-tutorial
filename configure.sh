@@ -10,7 +10,7 @@ function check_if_docker () {
 }
 function gen_alphanumeric () {
     if [ "$1" == "" ]; then
-        length=$(( ( RANDOM % 8 )  + 9 ))
+        length=$(( ( RANDOM % 8 )  + 12 ))
     else
         length="$1"
     fi
@@ -43,16 +43,16 @@ function get_input () {
     AUTO=${AUTO:-y}
     AUTO_CHECK=$(echo "${AUTO:0:1}" | tr '[:upper:]' '[:lower:]')
     if [ "$AUTO" == "y" ]; then
-        DB_NAME=$(gen_alphanumeric 7)
+        DB_NAME=$(gen_alphanumeric 4)
         DB_NAME="dbn_$DB_NAME"
         DB_USER=$(gen_alphanumeric 7)
         DB_USER="dbu_$DB_USER"
         DB_PASS=$(gen_alphanumeric)
         DB_ROOT_PASS=$(gen_alphanumeric)
-        GRAFANA_USER=$(gen_alphanumeric 7)
+        GRAFANA_USER=$(gen_alphanumeric 4)
         GRAFANA_USER="graf_$GRAFANA_USER"
         GRAFANA_PASS=$(gen_alphanumeric)
-        HT_USER=$(gen_alphanumeric 7)
+        HT_USER=$(gen_alphanumeric 4)
         HT_USER="ht_$HT_USER"
         HT_PASS=$(gen_alphanumeric)
         EXPORTER_PASS=$(gen_alphanumeric)
@@ -170,6 +170,7 @@ function configure_local () {
     find . \( -type d -name .git -prune \) -o -type f ! -name configure.sh ! -name "*.example" -print0 | xargs -0 sed -i "s|REPLACE_ME_GRAFANA_PASS|$GRAFANA_PASS|g"
     find . \( -type d -name .git -prune \) -o -type f ! -name configure.sh ! -name "*.example" -print0 | xargs -0 sed -i "s|REPLACE_ME_DATASOURCE_NAME|$DATA_SOURCE_NAME|g"
     find . \( -type d -name .git -prune \) -o -type f ! -name configure.sh ! -name "*.example" -print0 | xargs -0 sed -i "s|REPLACE_ME_DBC_STRING|$DB_CONNECTION_STRING|g"
+    find . \( -type d -name .git -prune \) -o -type f ! -name configure.sh ! -name "*.example" -print0 | xargs -0 sed -i "s|REPLACE_ME_EXPORTER_PASS|$EXPORTER_PASS|g"
     if $STAGING; then
         find . \( -type d -name .git -prune \) -o -type f ! -name configure.sh ! -name "*.example" -print0 | xargs -0 sed -i "s|REPLACE_ME_DISCORD_STAGING_TOKEN|$STAGING_DISCORD_TOKEN|g"
         find . \( -type d -name .git -prune \) -o -type f ! -name configure.sh ! -name "*.example" -print0 | xargs -0 sed -i "s|REPLACE_ME_DB_STAGING_NAME|$DB_STAGING_NAME|g"
