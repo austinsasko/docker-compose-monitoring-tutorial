@@ -3,3 +3,4 @@
 **__pycache**
 *.htpasswd
 keys.json
+initscripts/
