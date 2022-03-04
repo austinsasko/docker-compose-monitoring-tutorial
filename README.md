@@ -1,5 +1,24 @@
 # Full Stack Tutorial with Docker Compose
 
+## Pre-Requisites
+1. A (Cloudflare)[https://clouflare.com] account with at least 1 domain configured
+1. A (Discord account)[https://discord.com] with a (Discord token)[https://www.writebots.com/discord-bot-token/#generating_your_token_step-by-step]
+1. A Linux server running either CentOS, AlmaLinux, or RockyLinux that allows password based SSH authentication
+1. A fork of (Docker compose tutorial)[https://github.com/austinsasko/docker-compose-monitoring-tutorial]
+
+## Instructions
+1. Run ./configure.sh and follow the script steps and save the outputted credentials somewhere safe
+1. Create the GH secrets that the script asks you to
+1. (optional) Commit the changes on your local machine that the configure.sh made and push them to remote and see Github automatically create your docker-compose stack
+1. If you would rather manually make the stack rather than let Github CICD make it, just run the following, replacing REPLACE_ME_FILE with the 3 names of the docker-compose*.yml files in the root directory of this repo `docker compose -f REPLACE_ME_FILE.yml up -d`
+
+Or if you are unable or prefer not to run the script
+(Steps are a WIP)
+1. Generate an SSH key that docker compose will use to communicate with the server
+1. Create a remote context for docker to use so it knows your docker commands run remotely
+1. Find all mentions of "REPLACE_ME" in this repo and replace it with your own values
+1. Load the SSH public key into the remote server, install docker-ce and node_exporter,
+
 ## Description
 This repository is intended to imitate a full enterprise stack for any dockerized app (in this case its a Python discord bot).
 High level breakdown of the stack:
@@ -133,26 +152,6 @@ The detailed breakdown of the stacks consist of three main categories of contain
           - Is accessible to the internet on pma.domain.com. Container listens on hostname phpmyadmin and port 80 but traefik forwards all http/https traffic to the container
           - Requires Pre-authentication, using the htpasswd web auth user/pass from the initial config output AND then the username/password of the DB user you want to authenticate with
         * Customizations: NA
-
-## Pre-Requisites
-1. A (Cloudflare)[https://clouflare.com] account with at least 1 domain configured
-1. A (Discord account)[https://discord.com] with a (Discord token)[https://www.writebots.com/discord-bot-token/#generating_your_token_step-by-step]
-1. A Linux server running either CentOS, AlmaLinux, or RockyLinux.
-1. A fork of (Docker compose tutorial)[https://github.com/austinsasko/docker-compose-monitoring-tutorial]
-
-## Instructions
-1. Run ./configure.sh and follow the script steps and save the outputted credentials somewhere safe
-1. Create the GH secrets that the script asks you to
-1. (optional) Commit the changes on your local machine that the configure.sh made and push them to remote and see Github automatically create your docker-compose stack
-1. If you would rather manually make the stack rather than let Github CICD make it, just run the following, replacing REPLACE_ME_FILE with the 3 names of the docker-compose*.yml files in the root directory of this repo `docker compose -f REPLACE_ME_FILE.yml up -d`
-
-Or if you are unable or prefer not to run the script
-(Steps are a WIP)
-1. Generate an SSH key that docker compose will use to communicate with the server
-1. Create a remote context for docker to use so it knows your docker commands run remotely
-1. Find all mentions of "REPLACE_ME" in this repo and replace it with your own values
-1. Load the SSH public key into the remote server, install docker-ce and node_exporter,
-
 
 ## Docker Compose services format (ordering)
   # logging:

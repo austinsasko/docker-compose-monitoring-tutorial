@@ -58,8 +58,8 @@ function get_input () {
         EXPORTER_PASS=$(gen_alphanumeric)
         if $STAGING; then
             STAGING_PREFIX=$(gen_alphanumeric 4)
-            DB_STAGING_NAME"${STAGING_PREFIX}_${DB_NAME}"
-            DB_STAGING_NAME="${STAGING_PREFIX}_${DB_USER}"
+            DB_STAGING_NAME="${STAGING_PREFIX}_${DB_NAME}"
+            DB_STAGING_USER="${STAGING_PREFIX}_${DB_USER}"
             DB_STAGING_PASS="${STAGING_PREFIX}_${DB_PASS}"
             DB_STAGING_ROOT_PASS="${STAGING_PREFIX}_${DB_ROOT_PASS}"
             DB_STAGING_PORT=3307
@@ -85,14 +85,10 @@ function get_input () {
 }
 
 function ssh_key_and_config () {
-    echo "Backing up old local SSH config"
     mv ~/.ssh/config ~/.ssh/config.bak
-    echo "Saving host key fingerprint"
-    KNOWN_HOSTS=$(ssh-keyscan -H $HOST_OR_IP)
-    echo "$KNOWN_HOSTS" >> ~/.ssh/known_hosts
-    echo "Generating SSH Keypair"
+    KNOWN_HOSTS=$(ssh-keyscan -H $HOST_OR_IP 2>&1)
+    echo "$KNOWN_HOSTS" >> ~/.ssh/known_hosts 
     ssh-keygen -t rsa -b 4096 -C "docker_compose_client_script" -N "" -f ~/.ssh/docker_compose_host
-    echo "Adding new key to remote server"
     SSH_KEY=$(cat ~/.ssh/docker_compose_host)
     PUB_KEY=$(cat ~/.ssh/docker_compose_host.pub)
     ssh $HOST_OR_IP -l $SSH_USER -p $SSH_PORT "echo $PUB_KEY >> ~/.ssh/authorized_keys"
@@ -105,7 +101,7 @@ function ssh_key_and_config () {
 Host $HOST_OR_IP
     User     $SSH_USER
     IdentityFile       ~/.ssh/docker_compose_host" > ~/.ssh/config
-    echo "127.0.0.1 host.docker.internal" >> /etc/hosts
+    ssh $HOST_OR_IP -l $SSH_USER -p $SSH_PORT "echo '127.0.0.1 host.docker.internal' >> /etc/hosts"
 }
 
 function install_config_packages () {
@@ -143,13 +139,14 @@ function install_config_packages () {
     ssh $HOST_OR_IP -l $SSH_USER -p $SSH_PORT "systemctl start docker"
     ssh $HOST_OR_IP -l $SSH_USER -p $SSH_PORT "systemctl start fail2ban"
     ssh $HOST_OR_IP -l $SSH_USER -p $SSH_PORT "docker plugin install grafana/loki-docker-driver:latest --alias loki --grant-all-permissions"
-    ssh $HOST_OR_IP -l $SSH_USER -p $SSH_PORT "sed -i /etc/ssh/sshd_config 's/\#MaxSessions 10/MaxSessions 30/g'"
+    ssh $HOST_OR_IP -l $SSH_USER -p $SSH_PORT 'sed -i /etc/ssh/sshd_config "s/\#MaxSessions 10/MaxSessions 30/g"'
     ssh $HOST_OR_IP -l $SSH_USER -p $SSH_PORT "systemctl restart sshd"
 }
 
 function configure_local () {
-    docker context create remote --docker "host=ssh://$SSH_USER@$HOST_OR_IP:$SSH_PORT"
-    docker context use remote
+    docker context rm docker_compose_tut
+    docker context create docker_compose_tut --docker "host=ssh://$SSH_USER@$HOST_OR_IP:$SSH_PORT"
+    docker context use docker_compose_tut
     find . \( -type d -name .git -prune \) -o -type f ! -name client.sh -print0 | xargs -0 sed -i "s/REPLACE_ME_DISCORD_TOKEN/$DISCORD_TOKEN/g"
     find . \( -type d -name .git -prune \) -o -type f ! -name client.sh -print0 | xargs -0 sed -i "s/REPLACE_ME_DB_NAME/$DB_NAME/g"
     find . \( -type d -name .git -prune \) -o -type f ! -name client.sh -print0 | xargs -0 sed -i "s/REPLACE_ME_DB_USER/$DB_USER/g"
@@ -159,7 +156,7 @@ function configure_local () {
     find . \( -type d -name .git -prune \) -o -type f ! -name client.sh -print0 | xargs -0 sed -i "s/REPLACE_ME_CF_EMAIL/$CF_EMAIL/g"
     find . \( -type d -name .git -prune \) -o -type f ! -name client.sh -print0 | xargs -0 sed -i "s/REPLACE_ME_CF_DNS_API_TOKEN/$CF_API_KEY/g"
     find . \( -type d -name .git -prune \) -o -type f ! -name client.sh -print0 | xargs -0 sed -i "s/REPLACE_ME_WEB_AUTH_USER/$HT_USER/g"
-    find . \( -type d -name .git -prune \) -o -type f ! -name client.sh -print0 | xargs -0 sed -i "s/REPLACE_ME_WEB_AUTH_BCRYPT_PASSWORD/$ENCHT_PASS/g"
+    find . \( -type d -name .git -prune \) -o -type f ! -name client.sh -print0 | xargs -0 sed -i "s/REPLACE_ME_WEB_AUTH_BCRYPT_PASSWORD/$ENC_HTPASS/g"
     find . \( -type d -name .git -prune \) -o -type f ! -name client.sh -print0 | xargs -0 sed -i "s/REPLACE_ME_GRAFANA_USER/$GRAFANA_USER/g"
     find . \( -type d -name .git -prune \) -o -type f ! -name client.sh -print0 | xargs -0 sed -i "s/REPLACE_ME_GRAFANA_PASS/$GRAFANA_PASS/g"
     find . \( -type d -name .git -prune \) -o -type f ! -name client.sh -print0 | xargs -0 sed -i "s/REPLACE_ME_DATASOURCE_NAME/$DATA_SOURCE_NAME/g"
@@ -207,8 +204,8 @@ function print_creds () {
     fi
     echo -e "\n-- ACTION REQUIRED --"
     echo "If you want a fully functional automated GH Workflow (CICD), add the following secrets to the repo"
-    echo -e "Secret Name: KNOWN_HOSTS\nSecret Value: $KNOWN_HOSTS"
-    echo -e "Secret Name: SSH_KEY\nSecret Value: $docker_compose_host"
+    echo -e "Secret Name: KNOWN_HOSTS\nSecret Value: \n$KNOWN_HOSTS"
+    echo -e "Secret Name: SSH_KEY\nSecret Value: $SSH_KEY"
     echo -e "Secret Name: CF_API_KEY\nSecret Value: $CF_API_KEY"
     echo -e "Secret Name: CF_EMAIL\nSecret Value: $CF_EMAIL"
     echo -e "Secret Name: DB_DATASOURCE\nSecret Value: $DATA_SOURCE_NAME"
@@ -221,6 +218,7 @@ function print_creds () {
     echo -e "Secret Name: GC_SECURITY_ADMIN_PASSWORD\nSecret Value: $GRAFANA_PASS"
     echo -e "Secret Name: SSH_HOST\nSecret Value: $HOST_OR_IP"
     echo -e "Secret Name: SSH_USER\nSecret Value: $SSH_USER"
+    echo -e "Secret Name: SSH_PORT\nSecret Value: $SSH_PORT"
     if $STAGING; then
         echo -e "Secret Name: STAGING_DISCORD_TOKEN\nSecret Value: $STAGING_DISCORD_TOKEN"
         echo -e "Secret Name: DB_STAGING_PORT\nSecret Value: $DB_STAGING_PORT"
@@ -229,7 +227,7 @@ function print_creds () {
 
 # Getting user input
 get_input
-echo "Configuring SSH and creating new keys"
+echo "Configuring SSH hosts, keys, and fingerprints. Then will prompt you for the root password"
 ssh_key_and_config
 echo "Running server side scripts"
 install_config_packages
