@@ -16,7 +16,7 @@ services:
     volumes:
       - mysql-data_staging:/var/lib/mysql
     env_file:
-      - db_staging.env
+      - custom/db_staging.env
     networks:
       - backend_staging
 
@@ -29,7 +29,7 @@ services:
         STAGING: "true"
     restart: on-failure:5
     env_file:
-      - bot_staging.env
+      - custom/bot_staging.env
     networks:
       - backend_staging
     depends_on:
@@ -44,7 +44,7 @@ services:
         STAGING: "true"
     restart: always
     env_file:
-      - bot_staging.env
+      - custom/bot_staging.env
     networks:
       - backend_staging
       - world
@@ -61,7 +61,7 @@ services:
         STAGING: "true"
     restart: always
     env_file:
-      - bot_staging.env
+      - custom/bot_staging.env
     networks:
       - backend_staging
     labels:

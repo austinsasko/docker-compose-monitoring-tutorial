@@ -222,7 +222,7 @@ function configure_local () {
         cp -- "$file" "${file%%.example}"
     done
     mv custom/*.sql mariadb/initscripts/
-    mv custom/traefik.htpasswd traefik/.htpasswd
+    mv custom/traefik.htpasswd traefik/traefik.htpasswd
     mv custom/query_exporter_config.yaml query_exporter/
     docker context rm docker_compose_tut -f 2>/dev/null
     docker context create docker_compose_tut --docker "host=ssh://$SSH_USER@$HOST_OR_IP:$SSH_PORT"

@@ -16,7 +16,7 @@ services:
       - mysql-data:/var/lib/mysql
       - /home/mariadb/:/etc/mysql/conf.d/
     env_file:
-      - db.env
+      - custom/db.env
     networks:
       - backend_prod
 
@@ -26,7 +26,7 @@ services:
     build: sql_migrations/.
     restart: on-failure:5
     env_file:
-      - bot.env
+      - custom/bot.env
     networks:
       - backend_prod
     depends_on:
@@ -38,7 +38,7 @@ services:
     build: python_discord_bot/.
     restart: always
     env_file:
-      - bot.env
+      - custom/bot.env
     networks:
       - backend_prod
       - world
@@ -52,7 +52,7 @@ services:
     build: python_flask/.
     restart: always
     env_file:
-      - bot.env
+      - custom/bot.env
     networks:
       - backend_prod
     labels:
@@ -90,7 +90,7 @@ services:
       - --entrypoints.websecure.http.tls.certResolver=letsencrypt
       - --entrypoints.websecure.http.tls.domains[0].main=REPLACE_ME_DOMAIN
       - --entrypoints.websecure.http.tls.domains[0].sans=*.REPLACE_ME_DOMAIN
-      - --certificatesresolvers.dockerssl.acme.email=REPLACE_ME_CF_EMAIL
+      - --certificatesresolvers.dockerssl.acme.email=hostdarkcom@gmail.com
       - --certificatesresolvers.dockerssl.acme.dnschallenge=true
       - --certificatesresolvers.dockerssl.acme.dnschallenge.delaybeforecheck=0
       - --certificatesresolvers.dockerssl.acme.dnschallenge.provider=cloudflare
@@ -101,7 +101,7 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - certs:/letsencrypt
     env_file:
-      - traefik.env
+      - custom/traefik.env
     networks:
       - backend_staging
       - backend_prod
@@ -118,6 +118,22 @@ services:
       - traefik.http.routers.traefik.tls.certresolver=dockerssl
       - traefik.http.routers.traefik.service=api@internal
       - traefik.http.routers.traefik.middlewares=main_auth
+
+  cf-ddns:
+    <<: *logging
+    container_name: cf-ddns
+    image: oznu/cloudflare-ddns:latest
+    restart: always
+    env_file: custom/traefik.env
+
+  cf-companion:
+    <<: *logging
+    container_name: cf-companion
+    image: tiredofit/traefik-cloudflare-companion:latest
+    restart: always
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    env_file: custom/traefik.env
 
   whoami:
     <<: *logging

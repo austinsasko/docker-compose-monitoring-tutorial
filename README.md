@@ -89,6 +89,16 @@ The detailed breakdown of the stacks consist of three main categories of contain
         - traefik.http.routers.REPLACE_ME_SERVICE_NAME.tls.certresolver=dockerssl
         - traefik.http.services.REPLACE_ME_SERVICE_NAME.loadbalancer.server.port=REPLACE_ME_DEST_CONTAINER_PORT`
         ```
+    * Cf-Ddns
+        * What: Container used to keep Cloudflare DNS up to date, pointing the main domain's A record to this docker compose host IP
+        * How:
+          - Builds the latest oznu/cloudflare-ddns container as container `cf-ddns`.
+        * Customizations: None
+    * Cf-Companion
+        * What: Container used to keep track of all subdomains that are set up in docker-compose/traefik. Automatically provisions DNS records for new container domains through Cloudflare
+        * How:
+          - Builds the latest tiredofit/traefik-cloudflare-companion container as container `cf-companion`.
+        * Customizations: None
     * Whoami
         * What: Production version of the simple server info tool `traefik/whoami`
         * How:

@@ -67,7 +67,7 @@ services:
     image: prom/mysqld-exporter:latest
     restart: always
     env_file:
-      - mon.env
+      - custom/mon.env
     networks:
       - backend_staging
       - backend_prod
@@ -94,7 +94,7 @@ services:
     image: biospheere/promcord
     restart: always
     env_file: 
-      - mon.env
+      - custom/mon.env
     networks:
       - backend_staging
       - backend_prod
@@ -107,7 +107,7 @@ services:
       context: query_exporter/.
     restart: always
     env_file: 
-      - mon.env
+      - custom/mon.env
     networks:
       - backend_staging
       - backend_prod
@@ -121,7 +121,7 @@ services:
     volumes:
       - grafana_storage:/var/lib/grafana
     env_file:
-      - mon.env
+      - custom/mon.env
     networks:
       - backend_staging
       - backend_prod
