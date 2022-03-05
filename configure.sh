@@ -127,10 +127,11 @@ function get_input () {
         EXPORTER_PASS=$(gen_alphanumeric)
         if $STAGING; then
             STAGING_PREFIX=$(gen_alphanumeric 4)
-            DB_STAGING_NAME="${STAGING_PREFIX}_${DB_NAME}"
-            DB_STAGING_USER="${STAGING_PREFIX}_${DB_USER}"
-            DB_STAGING_PASS="${STAGING_PREFIX}_${DB_PASS}"
-            DB_STAGING_ROOT_PASS="${STAGING_PREFIX}_${DB_ROOT_PASS}"
+            STAGING_PREFIX="${STAGING_PREFIX}_"
+            DB_STAGING_NAME="${STAGING_PREFIX}${DB_NAME}"
+            DB_STAGING_USER="${STAGING_PREFIX}${DB_USER}"
+            DB_STAGING_PASS="${STAGING_PREFIX}${DB_PASS}"
+            DB_STAGING_ROOT_PASS="${STAGING_PREFIX}${DB_ROOT_PASS}"
             DB_STAGING_PORT=3307
         fi
     else
@@ -235,7 +236,7 @@ function configure_local () {
     find . \( -type d -name .git -prune \) -o -type f ! -name configure.sh ! -name "*.example" -print0 | xargs -0 sed -i "s|REPLACE_ME_DOMAIN|$DOMAIN|g"
     find . \( -type d -name .git -prune \) -o -type f ! -name configure.sh ! -name "*.example" -print0 | xargs -0 sed -i "s|REPLACE_ME_CF_EMAIL|$CF_EMAIL|g"
     find . \( -type d -name .git -prune \) -o -type f ! -name configure.sh ! -name "*.example" -print0 | xargs -0 sed -i "s|REPLACE_ME_CF_DNS_API_TOKEN|$CF_API_KEY|g"
-    find . \( -type d -name .git -prune \) -o -type f ! -name configure.sh ! -name "*.example" -print0 | xargs -0 sed -i "s|REPLACE_ME_ZONEID|$CF_ZONE_ID|g"
+    find . \( -type d -name .git -prune \) -o -type f ! -name configure.sh ! -name "*.example" -print0 | xargs -0 sed -i "s|REPLACE_ME_ZONE_ID|$CF_ZONE_ID|g"
     find . \( -type d -name .git -prune \) -o -type f ! -name configure.sh ! -name "*.example" -print0 | xargs -0 sed -i "s|REPLACE_ME_WEB_AUTH_USER|$HT_USER|g"
     find . \( -type d -name .git -prune \) -o -type f ! -name configure.sh ! -name "*.example" -print0 | xargs -0 sed -i "s|REPLACE_ME_WEB_AUTH_BCRYPT_PASSWORD|$ENC_HTPASS|g"
     find . \( -type d -name .git -prune \) -o -type f ! -name configure.sh ! -name "*.example" -print0 | xargs -0 sed -i "s|REPLACE_ME_GRAFANA_USER|$GRAFANA_USER|g"
@@ -275,7 +276,7 @@ function print_creds () {
     echo "Grafana Pass is $GRAFANA_PASS"
     if $STAGING; then
         echo -e "\n-- Staging Environment --"
-        echo "The prefix that is used for staging env is $STAGING_PREFIX  (for example db user in staging env would be ${STAGING_PREFIX}_${DB_NAME})"
+        echo "The prefix that is used for staging env is $STAGING_PREFIX  (for example db user in staging env would be ${STAGING_PREFIX}${DB_NAME})"
         echo "Staging DB Root Pass is $DB_STAGING_ROOT_PASS"
         echo "Staging DB Name is $DB_STAGING_NAME"
         echo "Staging DB User is $DB_STAGING_USER"
@@ -286,22 +287,35 @@ function print_creds () {
     echo "If you want a fully functional automated GH Workflow (CICD), add the following secrets to the repo"
     echo -e "Secret Name: KNOWN_HOSTS\nSecret Value: \n$KNOWN_HOSTS"
     echo -e "Secret Name: SSH_KEY\nSecret Value: \n$SSH_KEY"
-    echo -e "Secret Name: CF_API_KEY\nSecret Value: $CF_API_KEY"
-    echo -e "Secret Name: CF_EMAIL\nSecret Value: $CF_EMAIL"
-    echo -e "Secret Name: DB_DATASOURCE\nSecret Value: $DATA_SOURCE_NAME"
-    echo -e "Secret Name: DBC_STRING\nSecret Value: $DB_CONNECTION_STRING"
-    echo -e "Secret Name: DB_NAME\nSecret Value: $DB_NAME"
-    echo -e "Secret Name: DB_PASS\nSecret Value: $DB_PASS"
-    echo -e "Secret Name: DB_USER\nSecret Value: $DB_USER"
-    echo -e "Secret Name: DISCORD_TOKEN\nSecret Value: $DISCORD_TOKEN"
-    echo -e "Secret Name: GF_SECURITY_ADMIN_PASSWORD\nSecret Value: $GRAFANA_USER"
-    echo -e "Secret Name: GC_SECURITY_ADMIN_PASSWORD\nSecret Value: $GRAFANA_PASS"
     echo -e "Secret Name: SSH_HOST\nSecret Value: $HOST_OR_IP"
     echo -e "Secret Name: SSH_USER\nSecret Value: $SSH_USER"
     echo -e "Secret Name: SSH_PORT\nSecret Value: $SSH_PORT"
+
+    echo -e "Secret Name: CF_DOMAIN\nSecret Value: $DOMAIN"
+    echo -e "Secret Name: CF_ZONE_ID\nSecret Value: $CF_ZONE_ID"
+    echo -e "Secret Name: CF_API_KEY\nSecret Value: $CF_API_KEY"
+    echo -e "Secret Name: CF_EMAIL\nSecret Value: $CF_EMAIL"
+
+    echo -e "Secret Name: DB_NAME\nSecret Value: $DB_NAME"
+    echo -e "Secret Name: DB_PASS\nSecret Value: $DB_PASS"
+    echo -e "Secret Name: DB_USER\nSecret Value: $DB_USER"
+    echo -e "Secret Name: DB_DATASOURCE\nSecret Value: $DATA_SOURCE_NAME"
+    echo -e "Secret Name: DBC_STRING\nSecret Value: $DB_CONNECTION_STRING"
     echo -e "Secret Name: EXPORTER_PASS\nSecret Value: $EXPORTER_PASS"
+
+    echo -e "Secret Name: DISCORD_TOKEN\nSecret Value: $DISCORD_TOKEN"
+
+    echo -e "Secret Name: GF_ADMIN_USER\nSecret Value: $GRAFANA_USER"
+    echo -e "Secret Name: GF_ADMIN_PASS\nSecret Value: $GRAFANA_PASS"
+
+    echo -e "Secret Name: T_HTUSER\nSecret Value: $HT_USER"
+    echo -e "Secret Name: T_HTPASSWD\nSecret Value: $ENC_HTPASS"
+
     if $STAGING; then
         echo -e "Secret Name: STAGING_DISCORD_TOKEN\nSecret Value: $STAGING_DISCORD_TOKEN"
+        echo -e "Secret Name: DB_STAGING_NAME\nSecret Value: $DB_STAGING_NAME"
+        echo -e "Secret Name: DB_STAGING_USER_PASS\nSecret Value: $DB_STAGING_USER_PASS"
+        echo -e "Secret Name: DB_STAGING_USER\nSecret Value: $DB_STAGING_USER"
         echo -e "Secret Name: DB_STAGING_PORT\nSecret Value: $DB_STAGING_PORT"
     fi
 }

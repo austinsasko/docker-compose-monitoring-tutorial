@@ -14,19 +14,20 @@ jobs:
       - uses: actions/checkout@v2
       - name: Save secrets to mon.env files
         run: |
-          echo "DATA_SOURCE_NAME=${{ secrets.DB_DATASOURCE }}" >> mon.env
-          echo "GF_SECURITY_ADMIN_USER=${{ secrets.GF_ADMIN_USER }}" >> mon.env
-          echo "GF_SECURITY_ADMIN_PASSWORD=${{ secrets.GF_ADMIN_PASS }}" >> mon.env
-          echo "DISCORD_TOKEN=${{ secrets.DISCORD_TOKEN }}" >> mon.env
-          echo "PROMCORD_PREFIX=promcord_" >> mon.env
-          echo "DB_CONNECTION_STRING=${{ secrets.DBC_STRING }}" >> mon.env
+          cp custom/mon.env.example custom/mon.env
+
+          sed -i "s|REPLACE_ME_DATASOURCE_NAME|${{ secrets.DB_DATASOURCE }}|g" custom/mon.env
+          sed -i "s|REPLACE_ME_GRAFANA_USER|${{ secrets.GF_ADMIN_USER }}|g" custom/mon.env
+          sed -i "s|REPLACE_ME_GRAFANA_PASS|${{ secrets.GF_ADMIN_PASS }}|g" custom/mon.env
+          sed -i "s|REPLACE_ME_DISCORD_TOKEN|${{ secrets.DISCORD_TOKEN }}|g" custom/mon.env
+          sed -i "s|REPLACE_ME_DBC_STRING|${{ secrets.DBC_STRING }}|g" custom/mon.env
       
-      - name: Setup SSH stuff
+      - name: Set up SSH
         run: |
           mkdir -p ~/.ssh/
           echo "${{ secrets.SSH_KEY }}" >> ~/.ssh/ssh_key
-          chmod 0400 ~/.ssh/ssh_key
           echo "${{ secrets.KNOWN_HOSTS }}" >> ~/.ssh/known_hosts
+          chmod 0400 ~/.ssh/ssh_key
           echo -e "Host ${{ secrets.SSH_HOST }}\n\tHostName ${{ secrets.SSH_HOST }}\n\tUser ${{ secrets.SSH_USER }}\n\tIdentityFile ~/.ssh/ssh_key" >> ~/.ssh/config
 
       - name: Install docker-compose
@@ -48,46 +49,45 @@ jobs:
 
       - name: Save secrets to traefik.env files
         run: |
-          echo "CLOUDFLARE_EMAIL=${{ secrets.CF_EMAIL }}" >> traefik.env
-          echo "CLOUDFLARE_DNS_API_TOKEN=${{ secrets.CF_API_KEY }}" >> traefik.env
+          cp custom/traefik.env.example custom/traefik.env
+
+          sed -i "s|REPLACE_ME_CF_EMAIL|${{ secrets.CF_EMAIL }}|g" custom/mon.env
+          sed -i "s|REPLACE_ME_CF_DNS_API_TOKEN|${{ secrets.CF_API_KEY }}|g" custom/mon.env
+          sed -i "s|REPLACE_ME_DOMAIN|${{ secrets.DOMAIN }}|g" custom/mon.env
+          sed -i "s|REPLACE_ME_ZONE_ID|${{ secrets.CF_ZONE_ID }}|g" custom/mon.env
 
       - name: Save secrets to traefik htpasswd file
-        run: echo '${{ secrets.T_HTPASSWD }}' >> traefik/.htpasswd
+        run: |
+          cp custom/traefik.htpasswd.example traefik/traefik.htpasswd
+          sed -i "s|REPLACE_ME_WEB_AUTH_USER|${{ secrets.T_HTUSER }}|g" traefik/traefik.htpasswd
+          sed -i "s|REPLACE_ME_WEB_AUTH_BCRYPT_PASSWORD|${{ secrets.T_HTPASSWD }}|g" traefik/traefik.htpasswd
       
       - name: Setup SSH stuff
         run: |
           mkdir -p ~/.ssh/
           echo "${{ secrets.SSH_KEY }}" >> ~/.ssh/ssh_key
-          chmod 0400 ~/.ssh/ssh_key
           echo "${{ secrets.KNOWN_HOSTS }}" >> ~/.ssh/known_hosts
+          chmod 0400 ~/.ssh/ssh_key
           echo -e "Host ${{ secrets.SSH_HOST }}\n\tHostName ${{ secrets.SSH_HOST }}\n\tUser ${{ secrets.SSH_USER }}\n\tIdentityFile ~/.ssh/ssh_key" >> ~/.ssh/config
      
-      - name: Save secrets to bot.env files
+      - name: Save secrets to bot.env and db.env files
         run: |
-          echo "DISCORD_TOKEN=${{ secrets.DISCORD_TOKEN }}" >> bot.env
-          echo "DB_USER=${{ secrets.DB_USER }}" >> bot.env
-          echo "DB_PASS=${{ secrets.DB_PASS }}" >> bot.env
-          echo "DB_NAME=${{ secrets.DB_NAME }}" >> bot.env
-        if: github.ref == 'refs/heads/main'
-      
-      - name: Save secrets to db.env files
-        run: |
-          echo "MARIADB_ROOT_PASSWORD=${{ secrets.MYSQL_ROOT_PASSWORD }}" >> db.env
-          echo "MARIADB_DATABASE=${{ secrets.DB_NAME }}" >> db.env
-          echo "MARIADB_USER=${{ secrets.DB_USER }}" >> db.env
-          echo "MARIADB_PASSWORD=${{ secrets.DB_PASS }}" >> db.env
-          echo "TZ=America/New_York" >> db.env
+          cp custom/bot.env.example custom/bot.env
+          cp custom/db.env.example custom/db.env
+
+          sed -i "s|REPLACE_ME_DB_ROOT_PASS|${{ secrets.DB_ROOT_PASS }}|g" custom/db.env custom/bot.env
+          sed -i "s|REPLACE_ME_DB_NAME|${{ secrets.DB_NAME }}|g" custom/db.env custom/bot.env
+          sed -i "s|REPLACE_ME_DB_USER_PASS|${{ secrets.DB_USER_PASS }}|g" custom/db.env custom/bot.env
+          sed -i "s|REPLACE_ME_DB_USER|${{ secrets.DB_USER }}|g" custom/db.env custom/bot.env
         if: github.ref == 'refs/heads/main'
 
       - name: Save db init scripts
         run: |
-          echo "USE ${{ secrets.DB_NAME }}" >> mariadb/initscripts/user.sql
-          echo "CREATE USER 'exporter'@'db_exporter' IDENTIFIED BY '${{ secrets.EXPORTER_PASSWORD }}' WITH MAX_USER_CONNECTIONS 2;" >> mariadb/initscripts/user.sql
-          echo "GRANT PROCESS, REPLICATION CLIENT, SELECT ON *.* TO 'exporter'@'db_exporter';" >> mariadb/initscripts/user.sql
-          echo "FLUSH PRIVILEGES;" >> mariadb/initscripts/user.sql
-          echo "USE ${{ secrets.DB_NAME }}" >> mariadb/initscripts/table.sql
-          echo "CREATE TABLE IF NOT EXISTS example_table (example_column1 INT(15), example_column2 INT(15));" >> mariadb/initscripts/table.sql
-          echo "INSERT INTO example_table VALUES (1, 2), (3, 4), (1, 5);" >> mariadb/initscripts/table.sql
+          cp custom/table.sql.example mariadb/initscripts/table.sql
+          cp custom/user.sql.example mariadb/initscripts/user.sql
+          sed -i "s|REPLACE_ME_DB_NAME|${{ secrets.DB_NAME }}|g" initscripts/*.sql
+          sed -i "s|REPLACE_ME_EXPORTER_PASS|${{ secrets.EXPORTER_PASS }}|g" initscripts/*.sql
+        if: github.ref == 'refs/heads/main'
 
       - name: Install docker-compose
         run: pip install docker-compose
