@@ -3,4 +3,5 @@
 **__pycache**
 *.htpasswd
 keys.json
+query_exporter/query_exporter_config.yaml
 initscripts/

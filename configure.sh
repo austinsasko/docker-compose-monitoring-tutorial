@@ -1,5 +1,22 @@
 #!/bin/bash
 
+
+function usage () { 
+    cat << EOF
+    usage: $0 -d domain.com -e x@gmail.com -k cf_api_key -t discord_token -s staging_discord_token -h 1.1.1.1
+
+    OPTIONS:
+    -h      Show this message
+    -d      Specifies the domain registered in Cloudflare.com
+    -e      Specifies the email address used in the Cloudflare.com account
+    -k      Specifies the Cloudflare.com API Key. Needs at least DNS Read/Write. Create it here https://developers.cloudflare.com/api/tokens/create/ 
+    -t      Specifies the Discord token. Follow the instructions here https://www.writebots.com/discord-bot-token/#generating_your_token_step-by-step
+    -s      Specifies the Staging Discord token. Can be the same as the normal discord token if you do not want a staging discord server.
+    -p      Specifies the host or IP of the docker compose host server
+    -z      Specifies the Zone ID of the Cloudflare domain specified with -d https://community.cloudflare.com/t/where-to-find-zone-id/132913
+EOF
+}
+
 function check_if_docker () {
     if $(docker --help > /dev/null 2>&1); then
         echo "Docker installed, proceeding"
@@ -18,12 +35,60 @@ function gen_alphanumeric () {
 }
 
 function get_input () {
+    while getopts "hd:e:k:t:s:p:z:" opt; do
+        case ${opt} in
+            d )
+                DOMAIN=$OPTARG
+                ;;
+            e )
+                CF_EMAIL=$OPTARG
+                ;;
+            k )
+                CF_API_KEY=$OPTARG
+                ;;
+            t )
+                DISCORD_TOKEN=$OPTARG
+                ;;
+            s )
+                STAGING_DISCORD_TOKEN=$OPTARG
+                ;;
+            p )
+                HOST_OR_IP=$OPTARG
+                ;;
+            z )
+                CF_ZONE_ID=$OPTARG
+                ;;
+            h )
+                usage
+                exit 1
+                ;;
+            * )
+                echo "Invalid Option: -$OPTARG" 1>&2
+                echo "Usage: -d [Domain.com] -e [Cloudflare Email] -k [Cloudflare API Key]\
+                -t [Discord Token] -s [Staging Discord Token] -h 1.1.1.1"
+                echo "  e.g. -d domain.com -e x@gmail.com -k cf_api_key -t discord_token -s staging_discord_token -h 1.1.1.1"
+                exit 1
+                ;;
+        esac
+    done
+
     echo "You will now be asked for information to help us configure your system for docker compose. Press enter to use the default value in []."
     read -p 'Do you want a staging env - recommended [y]: ' STAGING
-    read -p 'Registered domain in Cloudflare (Will access containers on this): ' DOMAIN
-    read -p 'Cloudflare Email Address: ' CF_EMAIL
-    read -p 'Cloudflare API Key (needs DNS access) (https://developers.cloudflare.com/api/tokens/create/): ' CF_API_KEY
-    read -p 'Discord Token (https://www.writebots.com/discord-bot-token/#generating_your_token_step-by-step): ' DISCORD_TOKEN
+    if [ -z "$DOMAIN" ]; then
+        read -p 'Registered domain in Cloudflare: ' DOMAIN
+    fi
+    if [ -z "$CF_EMAIL" ]; then
+        read -p 'Cloudflare Email Address: ' CF_EMAIL
+    fi
+    if [ -z "$CF_API_KEY" ]; then
+        read -p 'Cloudflare API Key (needs DNS access) (https://developers.cloudflare.com/api/tokens/create/): ' CF_API_KEY
+    fi
+    if [ -z "$CF_ZONE_ID" ]; then
+        read -p 'Cloudflare DNS Zone ID (https://community.cloudflare.com/t/where-to-find-zone-id/132913) : ' CF_ZONE_ID
+    fi
+    if [ -z "$DISCORD_TOKEN" ]; then
+        read -p 'Discord Token (https://www.writebots.com/discord-bot-token/#generating_your_token_step-by-step): ' DISCORD_TOKEN
+    fi
     STAGING=${STAGING:-y}
     AUTO_CHECK=$(echo "${STAGING:0:1}" | tr '[:upper:]' '[:lower:]')
     if [ "$STAGING" == "y" ]; then
@@ -32,9 +97,13 @@ function get_input () {
         STAGING=false
     fi
     if $STAGING; then
-        read -p 'Staging Discord Token (enter same token as prod if you do not have a staging Discord server): ' STAGING_DISCORD_TOKEN
+        if [ -z "$STAGING_DISCORD_TOKEN" ]; then
+            read -p 'Staging Discord Token (enter same token as prod if you do not have a staging Discord server): ' STAGING_DISCORD_TOKEN
+        fi
     fi
-    read -p 'SSH Host / IP: ' HOST_OR_IP
+    if [ -z "$HOST_OR_IP" ]; then
+        read -p 'SSH Host / IP: ' HOST_OR_IP
+    fi
     read -p 'SSH Username [root]: ' SSH_USER
     SSH_USER=${SSH_USER:-root}
     read -p 'SSH Port [22]: ' SSH_PORT
@@ -138,21 +207,23 @@ function install_config_packages () {
     WantedBy=multi-user.target" > /etc/systemd/system/node_exporter.service'
     echo "Reloading, starting, checking status and enabling node exporter on startup"
     ssh $HOST_OR_IP -l $SSH_USER -p $SSH_PORT "systemctl daemon-reload"
-    ssh $HOST_OR_IP -l $SSH_USER -p $SSH_PORT "systemctl start node_exporter"
-    ssh $HOST_OR_IP -l $SSH_USER -p $SSH_PORT "systemctl status node_exporter"
-    ssh $HOST_OR_IP -l $SSH_USER -p $SSH_PORT "systemctl enable node_exporter"
-    ssh $HOST_OR_IP -l $SSH_USER -p $SSH_PORT "systemctl start docker"
-    ssh $HOST_OR_IP -l $SSH_USER -p $SSH_PORT "systemctl start fail2ban"
+    ssh $HOST_OR_IP -l $SSH_USER -p $SSH_PORT "systemctl start node_exporter && systemctl status node_exporter && systemctl enable node_exporter"
+    ssh $HOST_OR_IP -l $SSH_USER -p $SSH_PORT "systemctl start docker && systemctl status docker && systemctl enable docker"
+    ssh $HOST_OR_IP -l $SSH_USER -p $SSH_PORT "systemctl start fail2ban && systemctl status fail2ban && systemctl enable fail2ban"
     ssh $HOST_OR_IP -l $SSH_USER -p $SSH_PORT "docker plugin install grafana/loki-docker-driver:latest --alias loki --grant-all-permissions"
-    ssh $HOST_OR_IP -l $SSH_USER -p $SSH_PORT "sed -i 's|#MaxSessions 10|MaxSessions 30|g' /etc/ssh/sshd_config"
+    ssh $HOST_OR_IP -l $SSH_USER -p $SSH_PORT 'sed -i "s|#MaxSessions 10|MaxSessions 30|g" /etc/ssh/sshd_config'
     ssh $HOST_OR_IP -l $SSH_USER -p $SSH_PORT "systemctl restart sshd"
 }
 
 function configure_local () {
-    rm -f bot_staging.env bot.env db_staging.env db.env mon.env traefik.env
+    cd custom/
+    rm -f bot_staging.env bot.env db_staging.env db.env mon.env traefik.env traefik/.htpasswd query_exporter/query_exporter_config.yaml mariadb/initscripts/user.sql mariadb/initscripts/table.sql
     for file in *.example; do
         cp -- "$file" "${file%%.example}"
     done
+    mv custom/*.sql mariadb/initscripts/
+    mv custom/traefik.htpasswd traefik/.htpasswd
+    mv custom/query_exporter_config.yaml query_exporter/
     docker context rm docker_compose_tut -f 2>/dev/null
     docker context create docker_compose_tut --docker "host=ssh://$SSH_USER@$HOST_OR_IP:$SSH_PORT"
     docker context use docker_compose_tut
@@ -164,6 +235,7 @@ function configure_local () {
     find . \( -type d -name .git -prune \) -o -type f ! -name configure.sh ! -name "*.example" -print0 | xargs -0 sed -i "s|REPLACE_ME_DOMAIN|$DOMAIN|g"
     find . \( -type d -name .git -prune \) -o -type f ! -name configure.sh ! -name "*.example" -print0 | xargs -0 sed -i "s|REPLACE_ME_CF_EMAIL|$CF_EMAIL|g"
     find . \( -type d -name .git -prune \) -o -type f ! -name configure.sh ! -name "*.example" -print0 | xargs -0 sed -i "s|REPLACE_ME_CF_DNS_API_TOKEN|$CF_API_KEY|g"
+    find . \( -type d -name .git -prune \) -o -type f ! -name configure.sh ! -name "*.example" -print0 | xargs -0 sed -i "s|REPLACE_ME_ZONEID|$CF_ZONE_ID|g"
     find . \( -type d -name .git -prune \) -o -type f ! -name configure.sh ! -name "*.example" -print0 | xargs -0 sed -i "s|REPLACE_ME_WEB_AUTH_USER|$HT_USER|g"
     find . \( -type d -name .git -prune \) -o -type f ! -name configure.sh ! -name "*.example" -print0 | xargs -0 sed -i "s|REPLACE_ME_WEB_AUTH_BCRYPT_PASSWORD|$ENC_HTPASS|g"
     find . \( -type d -name .git -prune \) -o -type f ! -name configure.sh ! -name "*.example" -print0 | xargs -0 sed -i "s|REPLACE_ME_GRAFANA_USER|$GRAFANA_USER|g"
@@ -178,14 +250,14 @@ function configure_local () {
         find . \( -type d -name .git -prune \) -o -type f ! -name configure.sh ! -name "*.example" -print0 | xargs -0 sed -i "s|REPLACE_ME_DB_STAGING_USER|$DB_STAGING_USER|g"
         find . \( -type d -name .git -prune \) -o -type f ! -name configure.sh ! -name "*.example" -print0 | xargs -0 sed -i "s|REPLACE_ME_DB_STAGING_ROOT_PASS|$DB_STAGING_ROOT_PASS|g"
         find . \( -type d -name .git -prune \) -o -type f ! -name configure.sh ! -name "*.example" -print0 | xargs -0 sed -i "s|REPLACE_ME_DB_STAGING_PORT|$DB_STAGING_PORT|g"
-        rm -f .github/workflows/prod.yml
+        rm -f ../.github/workflows/prod.yml
     else
         rm -f bot_staging.env
-        rm -f db_staging.env
-        rm -f docker-compose-staging.yml
-        rm -f .github/workflows/prod_and_staging.yml
+        rm -f db_staging
+        rm -f ../docker-compose-staging.yml
+        rm -f ../.github/workflows/prod_and_staging.yml
     fi
-
+    cd ../
 }
 
 function print_creds () {
@@ -235,7 +307,7 @@ function print_creds () {
 }
 
 # Getting user input
-get_input
+get_input "$@"
 echo "Configuring SSH hosts, keys, and fingerprints. Then will prompt you for the root password"
 ssh_key_and_config
 echo "Running server side scripts"

@@ -5,8 +5,6 @@ import re
 from models import DiscordUser, VCTracker
 
 intents = discord.Intents.default()
-intents.members = True
-intents.presences = True
 client = discord.Client(intents=intents)
 
 async def send_message(content, channel=None):

@@ -1,9 +1,13 @@
 # Full Stack Tutorial with Docker Compose
 
 ## Pre-Requisites
-1. A (Cloudflare)[https://clouflare.com] account with at least 1 domain configured
+1. A (Cloudflare)[https://clouflare.com] account
+  - At least 1 domain configured
+  - The SSL setting on that domain being set to "Full"
 1. A (Discord account)[https://discord.com] with a (Discord token)[https://www.writebots.com/discord-bot-token/#generating_your_token_step-by-step]
-1. A Linux server running either CentOS, AlmaLinux, or RockyLinux that allows password based SSH authentication
+1. A Linux server running either CentOS, AlmaLinux, or RockyLinux
+  - Must allow password based SSH authentication
+  - At least 4GB of RAM
 1. A fork of (Docker compose tutorial)[https://github.com/austinsasko/docker-compose-monitoring-tutorial]
 
 ## Instructions
@@ -21,7 +25,8 @@ Or if you are unable or prefer not to run the script
 1. Generate an SSH key that docker compose will use to communicate with the server
 1. Create a remote context for docker to use so it knows your docker commands run remotely
 1. Find all mentions of "REPLACE_ME" in this repo and replace it with your own values
-1. Load the SSH public key into the remote server, install docker-ce and node_exporter,
+1. Move all the .example files to non-example files
+1. Load the SSH public key into the remote server, install docker-ce and node_exporter
 
 ## Description
 This repository is intended to imitate a full enterprise stack for any dockerized app (in this case its a Python discord bot).
@@ -48,7 +53,7 @@ The detailed breakdown of the stacks consist of three main categories of contain
     * MariaDB
         * What: Production version of the latest version of database engine MariaDB, a fork of MySQL.
         * How:
-          - Will execute the SQL in mariadb/initscript.sql on first run and will apply any custom configuration in mariadb/conf.d/
+          - Will execute the .SQL files in custom/*.sql on first run and will apply any custom configuration in mariadb/conf.d/
           - Is not accessible to the internet, strictly an intranet container that has no ingress or egress traffic to the world. Only communicates to the internal containers for DB operations.
         * Customizations: Will run on port 3306
     * Sql_migrations
@@ -157,7 +162,7 @@ The detailed breakdown of the stacks consist of three main categories of contain
           - Requires Pre-authentication, using the htpasswd web auth user/pass from the initial config output AND then the username/password of the DB user you want to authenticate with
         * Customizations: NA
 
-## Docker Compose services format (ordering)
+## Docker Compose services format (file structure order)
   # logging:
   # container_name:
   # image / build:

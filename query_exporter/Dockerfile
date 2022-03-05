@@ -1,2 +1,2 @@
 FROM adonato/query-exporter:latest
-COPY ./config.yaml /config.yaml
+COPY ./query_exporter_config.yaml /config.yaml

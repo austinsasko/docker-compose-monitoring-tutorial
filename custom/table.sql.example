@@ -1,0 +1,3 @@
+USE REPLACE_ME_DB_NAME;
+CREATE TABLE IF NOT EXISTS example_table (example_column1 INT(15), example_column2 INT(15));
+INSERT INTO example_table VALUES (1, 2), (3, 4), (1, 5);
