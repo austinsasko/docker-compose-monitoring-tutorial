@@ -218,13 +218,13 @@ function install_config_packages () {
 
 function configure_local () {
     cd custom/
-    rm -f bot_staging.env bot.env db_staging.env db.env mon.env traefik.env traefik/.htpasswd query_exporter/query_exporter_config.yaml mariadb/initscripts/user.sql mariadb/initscripts/table.sql
+    rm -f bot_staging.env bot.env db_staging.env db.env mon.env traefik.env ../traefik/.htpasswd ../query_exporter/query_exporter_config.yaml ../mariadb/initscripts/user.sql ../mariadb/initscripts/table.sql
     for file in *.example; do
         cp -- "$file" "${file%%.example}"
     done
-    mv custom/*.sql mariadb/initscripts/
-    mv custom/traefik.htpasswd traefik/traefik.htpasswd
-    mv custom/query_exporter_config.yaml query_exporter/
+    mv *.sql ../mariadb/initscripts/
+    mv traefik.htpasswd ../traefik/traefik.htpasswd
+    mv query_exporter_config.yaml ../query_exporter/
     docker context rm docker_compose_tut -f 2>/dev/null
     docker context create docker_compose_tut --docker "host=ssh://$SSH_USER@$HOST_OR_IP:$SSH_PORT"
     docker context use docker_compose_tut
@@ -254,7 +254,7 @@ function configure_local () {
         rm -f ../.github/workflows/prod.yml
     else
         rm -f bot_staging.env
-        rm -f db_staging
+        rm -f db_staging.env
         rm -f ../docker-compose-staging.yml
         rm -f ../.github/workflows/prod_and_staging.yml
     fi
@@ -314,7 +314,7 @@ function print_creds () {
     if $STAGING; then
         echo -e "Secret Name: STAGING_DISCORD_TOKEN\nSecret Value: $STAGING_DISCORD_TOKEN"
         echo -e "Secret Name: DB_STAGING_NAME\nSecret Value: $DB_STAGING_NAME"
-        echo -e "Secret Name: DB_STAGING_USER_PASS\nSecret Value: $DB_STAGING_USER_PASS"
+        echo -e "Secret Name: DB_STAGING_USER_PASS\nSecret Value: $DB_STAGING_PASS"
         echo -e "Secret Name: DB_STAGING_USER\nSecret Value: $DB_STAGING_USER"
         echo -e "Secret Name: DB_STAGING_PORT\nSecret Value: $DB_STAGING_PORT"
     fi
