@@ -2,22 +2,30 @@
 
 ## Pre-Requisites
 1. A [Cloudflare](https://clouflare.com) account
-  - At least 1 domain configured
-  - The SSL setting on that domain being set to "Full"
+    - At least 1 domain configured
+    - The SSL setting on that domain being set to "Full"
 2. To use the Discord bot:
-  - [A Discord Server](https://support.discord.com/hc/en-us/articles/204849977-How-do-I-create-a-server-)
-  - [A Discord account](https://discord.com) with a [Discord token](https://www.writebots.com/discord-bot-token/#generating_your_token_step-by-step)
+    - [A Discord Server](https://support.discord.com/hc/en-us/articles/204849977-How-do-I-create-a-server-)
+    - [A Discord account](https://discord.com) with a [Discord token](https://www.writebots.com/discord-bot-token/#generating_your_token_step-by-step)
 3. A Linux server running either CentOS, AlmaLinux, or RockyLinux
-  - Must allow password based SSH authentication
-  - At least 4GB of RAM
-  - Note: Student emails get a free server credit in many places, such as Digital Ocean.
+    - Must allow password based SSH authentication
+    - At least 4GB of RAM
+    - Note: Student emails get a free server credit in many places, such as Digital Ocean.
 4. A fork of this repo, [Docker compose tutorial](https://github.com/austinsasko/docker-compose-monitoring-tutorial)
 
-## Instructions
+## Configuration
 1. Once you have completed the pre-requisites, in your repo fork (on local machine), run ./configure.sh and follow the script steps and save the outputted credentials somewhere safe
 2. All done, now you can choose your container deployment method
 
 
+### If you are unable or prefer not to run the script (Steps are a WIP and Experimental)
+1. Generate an SSH key that docker compose will use to communicate with the server
+2. Create a remote context for docker to use so it knows your docker commands run remotely
+3. Find all mentions of "REPLACE_ME" in this repo and replace it with your own values
+4. Move all the .example files to non-example files
+5. Load the SSH public key into the remote server, install docker-ce and node_exporter
+
+## Deployment
 - If you would like Github/Automation/CICD configuration:
   - Create the GH secrets that the script asks you to
   - Commit and push the changes that the configure.sh made. See Github automatically create your docker-compose stack
@@ -34,15 +42,6 @@
   - [Discord Bot Frontend](bot.REPLACE_ME_DOMAIN.com)
   - [Discord Bot Staging Frontend](bot-staging.REPLACE_ME_DOMAIN.com)
   - [PHPMyAdmin](pma.REPLACE_ME_DOMAIN.com)
-
-
-Note: If you are unable or prefer not to run the script
-(Steps are a WIP and Experimental)
-1. Generate an SSH key that docker compose will use to communicate with the server
-2. Create a remote context for docker to use so it knows your docker commands run remotely
-3. Find all mentions of "REPLACE_ME" in this repo and replace it with your own values
-4. Move all the .example files to non-example files
-5. Load the SSH public key into the remote server, install docker-ce and node_exporter
 
 ## Description
 This repository is intended to imitate a full enterprise stack for any dockerized app (in this case its a Python discord bot).
