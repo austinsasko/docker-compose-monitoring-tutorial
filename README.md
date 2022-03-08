@@ -1,67 +1,67 @@
 # Full Stack Tutorial with Docker Compose
 
 ## Pre-Requisites
-1. A (Cloudflare)[https://clouflare.com] account
+1. A [Cloudflare](https://clouflare.com) account
   - At least 1 domain configured
   - The SSL setting on that domain being set to "Full"
-1. To use the Discord bot:
-  - (A Discord Server)[https://support.discord.com/hc/en-us/articles/204849977-How-do-I-create-a-server-]
-  - (A Discord account)[https://discord.com] with a (Discord token)[https://www.writebots.com/discord-bot-token/#generating_your_token_step-by-step]
-1. A Linux server running either CentOS, AlmaLinux, or RockyLinux
+2. To use the Discord bot:
+  - [A Discord Server](https://support.discord.com/hc/en-us/articles/204849977-How-do-I-create-a-server-)
+  - [A Discord account](https://discord.com) with a [Discord token](https://www.writebots.com/discord-bot-token/#generating_your_token_step-by-step)
+3. A Linux server running either CentOS, AlmaLinux, or RockyLinux
   - Must allow password based SSH authentication
   - At least 4GB of RAM
   - Note: Student emails get a free server credit in many places, such as Digital Ocean.
-1. A fork of this repo, (Docker compose tutorial)[https://github.com/austinsasko/docker-compose-monitoring-tutorial]
+4. A fork of this repo, [Docker compose tutorial](https://github.com/austinsasko/docker-compose-monitoring-tutorial)
 
 ## Instructions
 1. Once you have completed the pre-requisites, in your repo fork (on local machine), run ./configure.sh and follow the script steps and save the outputted credentials somewhere safe
-1. All done, now you can choose your container deployment method
+2. All done, now you can choose your container deployment method
 
 
-1. If you would like Github/Automation/CICD configuration:
+- If you would like Github/Automation/CICD configuration:
   - Create the GH secrets that the script asks you to
   - Commit and push the changes that the configure.sh made. See Github automatically create your docker-compose stack
-1. If you would rather manually make the stack rather than let Github CICD make it, just run the following:
+- If you would rather manually make the stack rather than let Github CICD make it, just run the following:
   - `docker-compose -f docker-compose-monitoring.yml up -d --build`
   - `docker-compose -f docker-compose-staging.yml up -d --build`
   - `docker-compose -f docker-compose.yml up -d --build`
 
-1. Access your containers at the following URLs (Once configure.sh is ran, these will be auto-replaced to thec orrect domain)
-  - (Traefik)[traefik.REPLACE_ME_DOMAIN.com]
-  - (Grafana)[grafana.REPLACE_ME_DOMAIN.com]
-  - (Whoami tool)[whoami.REPLACE_ME_DOMAIN.com]
-  - (Prometheus)[prometheus.REPLACE_ME_DOMAIN.com]
-  - (Discord Bot Frontend)[bot.REPLACE_ME_DOMAIN.com]
-  - (Discord Bot Staging Frontend)[bot-staging.REPLACE_ME_DOMAIN.com]
-  - (PHPMyAdmin)[pma.REPLACE_ME_DOMAIN.com]
+- Access your containers at the following URLs (Once configure.sh is ran, these will be auto-replaced to thec orrect domain)
+  - [Traefik](traefik.REPLACE_ME_DOMAIN.com)
+  - [Grafana](grafana.REPLACE_ME_DOMAIN.com)
+  - [Whoami tool](whoami.REPLACE_ME_DOMAIN.com)
+  - [Prometheus](prometheus.REPLACE_ME_DOMAIN.com)
+  - [Discord Bot Frontend](bot.REPLACE_ME_DOMAIN.com)
+  - [Discord Bot Staging Frontend](bot-staging.REPLACE_ME_DOMAIN.com)
+  - [PHPMyAdmin](pma.REPLACE_ME_DOMAIN.com)
 
 
 Note: If you are unable or prefer not to run the script
 (Steps are a WIP and Experimental)
 1. Generate an SSH key that docker compose will use to communicate with the server
-1. Create a remote context for docker to use so it knows your docker commands run remotely
-1. Find all mentions of "REPLACE_ME" in this repo and replace it with your own values
-1. Move all the .example files to non-example files
-1. Load the SSH public key into the remote server, install docker-ce and node_exporter
+2. Create a remote context for docker to use so it knows your docker commands run remotely
+3. Find all mentions of "REPLACE_ME" in this repo and replace it with your own values
+4. Move all the .example files to non-example files
+5. Load the SSH public key into the remote server, install docker-ce and node_exporter
 
 ## Description
 This repository is intended to imitate a full enterprise stack for any dockerized app (in this case its a Python discord bot).
 High level breakdown of the stack:
--  Database Engine (MariaDB)[https://hub.docker.com/_/mariadb]
--  Database schema management tool (Alembic)[./sql_migrations/Dockerfile]
-- Python discord bot (backend discord.py and frontend flask)[./python_discord_bot/Dockerfile]
-- Reverse proxy for handling traffic between the internet and the intranet container network - (Traefik)[https://hub.docker.com/_/traefik]
-- Debug info webpage - (Traefik Whoami)[https://hub.docker.com/r/traefik/whoami]
+- Database Engine [MariaDB](https://hub.docker.com/_/mariadb)
+- Database schema management tool [Alembic](./sql_migrations/Dockerfile)
+- Python discord bot [backend discord.py and frontend flask](./python_discord_bot/Dockerfile)
+- Reverse proxy for handling traffic between the internet and the intranet container network - [Traefik](https://hub.docker.com/_/traefik)
+- Debug info webpage - [Traefik Whoami](https://hub.docker.com/r/traefik/whoami)
 The production stack has a mirrored staging stack that excludes the Traefik containers. Additionally, there is a monitoring stack with mostly standard monitoring tools:
-- (Prometheus)[https://hub.docker.com/r/prom/prometheus] (Metric storage/monitoring)
-- (Grafana)[https://hub.docker.com/r/grafana/grafana] (Data visualization)
-- (cadvisor)[https://hub.docker.com/r/google/cadvisor] (Full system metric reporting > Prometheus)
-- (alertmanager)[https://hub.docker.com/r/prom/alertmanager] (Alerting > Prometheus)
-- (Grafana-Loki)[https://hub.docker.com/r/grafana/loki] (Logging > Grafana)
-- (promtail)[https://hub.docker.com/r/grafana/promtail] (Log metrics > Grafana Loki)
-- (db_exporter)[https://hub.docker.com/r/prom/mysqld-exporter] (Database metric reporting > Prometheus)
-- (promcord)[https://hub.docker.com/r/biospheere/promcord] (Discord metric reporting > Prometheus)
-- (query_exporter)[https://hub.docker.com/r/adonato/query-exporter] (Specific table data reporting > Prometheus) instances.
+- [Prometheus](https://hub.docker.com/r/prom/prometheus) (Metric storage/monitoring)
+- [Grafana](https://hub.docker.com/r/grafana/grafana) (Data visualization)
+- [cadvisor](https://hub.docker.com/r/google/cadvisor) (Full system metric reporting > Prometheus)
+- [alertmanager](https://hub.docker.com/r/prom/alertmanager) (Alerting > Prometheus)
+- [Grafana-Loki](https://hub.docker.com/r/grafana/loki) (Logging > Grafana)
+- [promtail](https://hub.docker.com/r/grafana/promtail) (Log metrics > Grafana Loki)
+- [db_exporter](https://hub.docker.com/r/prom/mysqld-exporter) (Database metric reporting > Prometheus)
+- [promcord](https://hub.docker.com/r/biospheere/promcord) (Discord metric reporting > Prometheus)
+- [query_exporter](https://hub.docker.com/r/adonato/query-exporter) (Specific table data reporting > Prometheus) instances.
 
 All containers are monitored both from a resource (Prometheus/Grafana metrics) and a docker logs perspective (Sent to Grafana-Loki Dashboard)
 The detailed breakdown of the stacks consist of three main categories of containers:
@@ -122,14 +122,14 @@ The detailed breakdown of the stacks consist of three main categories of contain
           - Is accessible via whoami.domain.com, the container listens on hostname whoami and port 80 but whoami.domain.com traffic is tunneled through traefik so all HTTP/HTTPS to URL goes to container.
           - Requires authentication, htpasswd web auth user and pass from config script
         * Customizations: None
-1. A staging environment consisting of the following services (See corresponding production list item for extra details)
+2. A staging environment consisting of the following services (See corresponding production list item for extra details)
     * MariaDB_staging - Staging version of the latest version of database engine MariaDB, a fork of MySQL.
       Will run on port 3307 unless otherwise specified in config script
     * Sql_migrations_staging - Staging verison of DB Migration software Alembic.
     * Python_discord_bot_staging - Staging verison of Python Discord Bot using the STAGING discord bot token.
     * Python_bot_frontend_staging - Staging verison of Python bot frontend. Accessibla via bot-staging.domain.com rather than prod version of bot.domain.com
     * Traefik and whoami do not have a corresponding staging container as there is no need for them.
-1. A monitoring environment consisting of the following services
+3. A monitoring environment consisting of the following services
     * MariaDB
         * What: Grafana-Loki software
         * How:
