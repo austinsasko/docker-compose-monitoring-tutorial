@@ -23,10 +23,10 @@ async def daily_ping():
     channel_id = 907489456007807009 #Channel ID of channel to post this message in
     channel = client.get_channel(id=channel_id)
     if os.getenv("STAGING"): #Can do something diff in a staging environment. Use a diff channel ID, message, etc.
-        send_message("Hourly staging ping", channel)
+        await send_message("Hourly staging ping", channel)
         print("Do something different in staging")
         return
-    send_message("Hourly ping", channel)
+    await send_message("Hourly ping", channel)
 
 #GENERIC STUFF
 @client.event

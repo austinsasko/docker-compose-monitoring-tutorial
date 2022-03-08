@@ -25,6 +25,7 @@ function check_if_docker () {
         exit 0
     fi
 }
+
 function gen_alphanumeric () {
     if [ "$1" == "" ]; then
         length=$(( ( RANDOM % 8 )  + 12 ))
@@ -233,7 +234,7 @@ function configure_local () {
     find . \( -type d -name .git -prune \) -o -type f ! -name configure.sh ! -name "*.example" -print0 | xargs -0 sed -i "s|REPLACE_ME_DB_USER_PASS|$DB_PASS|g"
     find . \( -type d -name .git -prune \) -o -type f ! -name configure.sh ! -name "*.example" -print0 | xargs -0 sed -i "s|REPLACE_ME_DB_USER|$DB_USER|g"
     find . \( -type d -name .git -prune \) -o -type f ! -name configure.sh ! -name "*.example" -print0 | xargs -0 sed -i "s|REPLACE_ME_DB_ROOT_PASS|$DB_ROOT_PASS|g"
-    find . \( -type d -name .git -prune \) -o -type f ! -name configure.sh ! -name "*.example" -print0 | xargs -0 sed -i "s|REPLACE_ME_DOMAIN|$DOMAIN|g"
+    find ../. \( -type d -name .git -prune \) -o -type f ! -name configure.sh ! -name "*.example" ! -name "prod*.yml" -print0 | xargs -0 sed -i "s|REPLACE_ME_DOMAIN|$DOMAIN|g"
     find . \( -type d -name .git -prune \) -o -type f ! -name configure.sh ! -name "*.example" -print0 | xargs -0 sed -i "s|REPLACE_ME_CF_EMAIL|$CF_EMAIL|g"
     find . \( -type d -name .git -prune \) -o -type f ! -name configure.sh ! -name "*.example" -print0 | xargs -0 sed -i "s|REPLACE_ME_CF_DNS_API_TOKEN|$CF_API_KEY|g"
     find . \( -type d -name .git -prune \) -o -type f ! -name configure.sh ! -name "*.example" -print0 | xargs -0 sed -i "s|REPLACE_ME_ZONE_ID|$CF_ZONE_ID|g"

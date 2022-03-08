@@ -4,24 +4,40 @@
 1. A (Cloudflare)[https://clouflare.com] account
   - At least 1 domain configured
   - The SSL setting on that domain being set to "Full"
-1. A (Discord account)[https://discord.com] with a (Discord token)[https://www.writebots.com/discord-bot-token/#generating_your_token_step-by-step]
+1. To use the Discord bot:
+  - (A Discord Server)[https://support.discord.com/hc/en-us/articles/204849977-How-do-I-create-a-server-]
+  - (A Discord account)[https://discord.com] with a (Discord token)[https://www.writebots.com/discord-bot-token/#generating_your_token_step-by-step]
 1. A Linux server running either CentOS, AlmaLinux, or RockyLinux
   - Must allow password based SSH authentication
   - At least 4GB of RAM
-1. A fork of (Docker compose tutorial)[https://github.com/austinsasko/docker-compose-monitoring-tutorial]
+  - Note: Student emails get a free server credit in many places, such as Digital Ocean.
+1. A fork of this repo, (Docker compose tutorial)[https://github.com/austinsasko/docker-compose-monitoring-tutorial]
 
 ## Instructions
-1. Run ./configure.sh and follow the script steps and save the outputted credentials somewhere safe
-1. If you would like to skip the Github/Automation/CICD configuration for testing, feel free to skip the next 2 steps.
-1. Create the GH secrets that the script asks you to
-1. Commit and push the changes that the configure.sh made. See Github automatically create your docker-compose stack
-1. If you would rather manually make the stack rather than let Github CICD make it, just run the following:
-`docker-compose -f docker-compose-monitoring.yml up -d --build`
-`docker-compose -f docker-compose-staging.yml up -d --build`
-`docker-compose -f docker-compose.yml up -d --build`
+1. Once you have completed the pre-requisites, in your repo fork (on local machine), run ./configure.sh and follow the script steps and save the outputted credentials somewhere safe
+1. All done, now you can choose your container deployment method
 
-Or if you are unable or prefer not to run the script
-(Steps are a WIP)
+
+1. If you would like Github/Automation/CICD configuration:
+  - Create the GH secrets that the script asks you to
+  - Commit and push the changes that the configure.sh made. See Github automatically create your docker-compose stack
+1. If you would rather manually make the stack rather than let Github CICD make it, just run the following:
+  - `docker-compose -f docker-compose-monitoring.yml up -d --build`
+  - `docker-compose -f docker-compose-staging.yml up -d --build`
+  - `docker-compose -f docker-compose.yml up -d --build`
+
+1. Access your containers at the following URLs (Once configure.sh is ran, these will be auto-replaced to thec orrect domain)
+  - (Traefik)[traefik.REPLACE_ME_DOMAIN.com]
+  - (Grafana)[grafana.REPLACE_ME_DOMAIN.com]
+  - (Whoami tool)[whoami.REPLACE_ME_DOMAIN.com]
+  - (Prometheus)[prometheus.REPLACE_ME_DOMAIN.com]
+  - (Discord Bot Frontend)[bot.REPLACE_ME_DOMAIN.com]
+  - (Discord Bot Staging Frontend)[bot-staging.REPLACE_ME_DOMAIN.com]
+  - (PHPMyAdmin)[pma.REPLACE_ME_DOMAIN.com]
+
+
+Note: If you are unable or prefer not to run the script
+(Steps are a WIP and Experimental)
 1. Generate an SSH key that docker compose will use to communicate with the server
 1. Create a remote context for docker to use so it knows your docker commands run remotely
 1. Find all mentions of "REPLACE_ME" in this repo and replace it with your own values
@@ -173,15 +189,15 @@ The detailed breakdown of the stacks consist of three main categories of contain
         * Customizations: NA
 
 ## Docker Compose services format (file structure order)
-  # logging:
-  # container_name:
-  # image / build:
-  # restart:
-  # command:
-  # volumes:
-  # env file:
-  # networks:
-  # ports:
-  # labels:
-  # links:
-  # depends:
+  ### logging:
+  ### container_name:
+  ### image / build:
+  ### restart:
+  ### command:
+  ### volumes:
+  ### env file:
+  ### networks:
+  ### ports:
+  ### labels:
+  ### links:
+  ### depends:
