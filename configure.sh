@@ -165,7 +165,7 @@ function ssh_key_and_config () {
     ssh $HOST_OR_IP -l $SSH_USER -p $SSH_PORT "echo $PUB_KEY >> ~/.ssh/authorized_keys"
     if [ $? -ne 0 ]; then
         echo "Initial SSH attempt unsuccessful. Please read the Pre-reqs section in the README.md file."
-        echo "Make sure PasswordAuth is set to yes on the remote server SSH config"
+        echo "Make sure PasswordAuth is set to yes on the remote server SSH config and you restarted the sshd service"
         exit 1
     fi
     echo "Setting SSH to use the generated keys in the future"
@@ -223,9 +223,7 @@ function configure_local () {
     for file in *.example; do
         cp -- "$file" "${file%%.example}"
     done
-    mv *.sql ../mariadb/initscripts/
-    mv traefik.htpasswd ../traefik/traefik.htpasswd
-    mv query_exporter_config.yaml ../query_exporter/
+
     docker context rm docker_compose_tut -f 2>/dev/null
     docker context create docker_compose_tut --docker "host=ssh://$SSH_USER@$HOST_OR_IP:$SSH_PORT"
     docker context use docker_compose_tut
@@ -259,6 +257,9 @@ function configure_local () {
         rm -f ../docker-compose-staging.yml
         rm -f ../.github/workflows/prod_and_staging.yml
     fi
+    mv -f *.sql ../mariadb/initscripts/
+    mv -f traefik.htpasswd ../traefik/traefik.htpasswd
+    mv -f query_exporter_config.yaml ../query_exporter/
     cd ../
 }
 
