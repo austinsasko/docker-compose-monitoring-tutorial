@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - name: Save secrets to mon.env files
+      - name: Save secrets to mon.env file and query exporter config
         run: |
           cp custom/mon.env.example custom/mon.env
 
@@ -21,7 +21,10 @@ jobs:
           sed -i "s|REPLACE_ME_GRAFANA_PASS|${{ secrets.GF_ADMIN_PASS }}|g" custom/mon.env
           sed -i "s|REPLACE_ME_DISCORD_TOKEN|${{ secrets.DISCORD_TOKEN }}|g" custom/mon.env
           sed -i "s|REPLACE_ME_DBC_STRING|${{ secrets.DBC_STRING }}|g" custom/mon.env
-      
+
+          cp custom/query_exporter_config.yaml.example query_exporter/query_exporter_config.yaml
+          sed -i "s|REPLACE_ME_DB_NAME|${{ secrets.DB_NAME }}|g" query_exporter/query_exporter_config.yaml
+
       - name: Set up SSH
         run: |
           mkdir -p ~/.ssh/

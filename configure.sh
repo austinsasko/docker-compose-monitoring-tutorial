@@ -319,8 +319,8 @@ function print_creds () {
         > gh.env
         KNOWN_HOSTS=$(echo -n "$KNOWN_HOSTS" | sed -z 's/\n/\\n/g')
         SSH_KEY=$(echo -n "$SSH_KEY" | sed -z 's/\n/\\n/g')
-        echo "KNOWN_HOSTS='$KNOWN_HOSTS'" >> gh.env
-        echo "SSH_KEY='$SSH_KEY'" >> gh.env
+        echo "KNOWN_HOSTS=\"$KNOWN_HOSTS\"" >> gh.env
+        echo "SSH_KEY=\"$SSH_KEY\"" >> gh.env
         echo "SSH_HOST=$HOST_OR_IP" >> gh.env
         echo "SSH_USER=$SSH_USER" >> gh.env
         echo "SSH_PORT=$SSH_PORT" >> gh.env
