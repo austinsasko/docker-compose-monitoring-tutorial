@@ -3,11 +3,11 @@
 
 function usage () { 
     cat << EOF
-    usage: $0 -n domain.com -e x@gmail.com -k cf_api_key -t discord_token -s staging_discord_token -h 1.1.1.1 -d
+    usage: $0 -n domain.com -e x@gmail.com -k cf_api_key -t discord_token -s staging_discord_token -h 1.1.1.1 -d -g -a
 
     OPTIONS:
     -h      Show this message
-    -d      Use defaults for any prompts possible, in conjunction with the -nektspz flags, can be used to not ever prompt users except for the root password
+    -d      Use defaults for any remaining prompts possible, in conjunction with the -nektspza flags, can be used to not ever prompt users. Sets SSH_USER, SSH_PORT, STAGING, USE_GITHUB_SECRETS, AUTO_GENERATE_CREDS to 'root, 22, yes, yes, and yes' respectively.
     -n      Specifies the domain registered in Cloudflare.com
     -e      Specifies the email address used in the Cloudflare.com account
     -k      Specifies the Cloudflare.com API Key. Needs at least DNS Read/Write. Create it here https://developers.cloudflare.com/api/tokens/create/ 
@@ -15,7 +15,8 @@ function usage () {
     -s      Specifies the Staging Discord token. Can be the same as the normal discord token if you do not want a staging discord server.
     -p      Specifies the host or IP of the docker compose host server
     -z      Specifies the Zone ID of the Cloudflare domain specified with -d https://community.cloudflare.com/t/where-to-find-zone-id/132913
-    -g      Creates the GH secrets for you using a temporary .env file for the GH client
+    -g      Creates the GH secrets for you (requires gh client installation)
+    -a      Dont use password authentication at all, instead generate the SSH key FIRST that will be put on the remote SSH server
 EOF
 }
 
@@ -38,10 +39,15 @@ function gen_alphanumeric () {
 }
 
 function get_input () {
-    while getopts "gdhn:e:k:t:s:p:z:" opt; do
+    while getopts "agdhn:e:k:t:s:p:z:" opt; do
         case ${opt} in
             d )
                 DEFAULTS=true
+                STAGING="yes"
+                USE_GITHUB_SECRETS=true
+                SSH_USER="root"
+                SSH_PORT="22"
+                AUTO="yes"
                 ;;
             n )
                 DOMAIN=$OPTARG
@@ -65,7 +71,10 @@ function get_input () {
                 CF_ZONE_ID=$OPTARG
                 ;;
             g )
-                GITHUB_SECRETS=true
+                USE_GITHUB_SECRETS=true
+                ;;
+            a )
+                AUTH_KEY=true
                 ;;
             h )
                 usage
@@ -74,26 +83,30 @@ function get_input () {
             * )
                 echo "Invalid Option: -$OPTARG" 1>&2
                 echo "Usage: -n [Domain.com] -e [Cloudflare Email] -k [Cloudflare API Key]\
-                -t [Discord Token] -s [Staging Discord Token] -h 1.1.1.1 -d -g"
-                echo "  e.g. -n domain.com -e x@gmail.com -k cf_api_key -t discord_token -s staging_discord_token -h 1.1.1.1 -d -g"
+                -t [Discord Token] -s [Staging Discord Token] -h 1.1.1.1 -d -g -a"
+                echo "  e.g. -n domain.com -e x@gmail.com -k cf_api_key -t discord_token -s staging_discord_token -h 1.1.1.1 -d -g -a"
                 exit 1
                 ;;
         esac
     done
 
-    if $DEFAULTS; then
-        STAGING="yes"
-        GITHUB_SECRETS=true
-    else
+    if $AUTH_KEY; then
+        gen_ssh_keys
+        cat ~/.ssh/docker_compose_host.pub
+        echo "Add the above public key to your server's root authorized_keys file and then press enter"
+        read
+    fi
+
+    if ! $DEFAULTS; then
         echo "You will now be asked for information to help us configure your system for docker compose. Press enter to use the default value in []."
         read -p 'Do you want a staging env - recommended [y]: ' STAGING
         read -p 'Do you want this script to auto configure your GH repo secrets? - recommended [y]: ' GITHUB_SECRETS
         GITHUB_SECRETS=${GITHUB_SECRETS:-y}
-        GITHUB_SECRETS_TRIM=$(echo "${GITHUB_SECRETS:0:1}" | tr '[:upper:]' '[:lower:]')
-        if [ "$GITHUB_SECRETS_TRIM" == "y" ]; then
-            GITHUB_SECRETS=true
+        USE_GITHUB_SECRETS_TRIM=$(echo "${GITHUB_SECRETS:0:1}" | tr '[:upper:]' '[:lower:]')
+        if [ "$USE_GITHUB_SECRETS_TRIM" == "y" ]; then
+            USE_GITHUB_SECRETS=true
         else
-            GITHUB_SECRETS=false
+            USE_GITHUB_SECRETS=false
         fi
     fi
     if [ -z "$DOMAIN" ]; then
@@ -113,7 +126,7 @@ function get_input () {
     fi
     STAGING="${STAGING:-y}"
     AUTO_CHECK=$(echo "${STAGING:0:1}" | tr '[:upper:]' '[:lower:]')
-    if [ "$STAGING" == "y" ]; then
+    if [ "$AUTO_CHECK" == "y" ]; then
         STAGING=true
     else
         STAGING=false
@@ -126,11 +139,7 @@ function get_input () {
     if [ -z "$HOST_OR_IP" ]; then
         read -p 'SSH Host / IP: ' HOST_OR_IP
     fi
-    if $DEFAULTS; then
-        SSH_USER="root"
-        SSH_PORT="22"
-        AUTO="yes"
-    else
+    if ! $DEFAULTS; then
         read -p 'SSH Username [root]: ' SSH_USER
         SSH_USER=${SSH_USER:-root}
         read -p 'SSH Port [22]: ' SSH_PORT
@@ -182,21 +191,29 @@ function get_input () {
     ENC_HTPASS=$(openssl passwd -apr1 $HT_PASS)
 }
 
-function ssh_key_and_config () {
+function gen_ssh_keys() {
     rm -f ~/.ssh/docker_compose_host
+    mv ~/.ssh/config ~/.ssh/config.bak 2>/dev/null
+    ssh-keygen -t rsa -b 4096 -C "docker_compose_client_script" -N "" -f ~/.ssh/docker_compose_host
+}
+
+function ssh_key_and_config () {
     mv ~/.ssh/config ~/.ssh/config.bak 2>/dev/null
     mv ~/.ssh/known_hosts ~/.ssh/known_hosts.bak 2>/dev/null
     KNOWN_HOSTS=$(ssh-keyscan -H $HOST_OR_IP 2>&1)
     echo "$KNOWN_HOSTS" >> ~/.ssh/known_hosts 
-    ssh-keygen -t rsa -b 4096 -C "docker_compose_client_script" -N "" -f ~/.ssh/docker_compose_host
-    SSH_KEY=$(cat ~/.ssh/docker_compose_host)
-    PUB_KEY=$(cat ~/.ssh/docker_compose_host.pub)
-    ssh $HOST_OR_IP -l $SSH_USER -p $SSH_PORT "echo $PUB_KEY >> ~/.ssh/authorized_keys"
-    if [ $? -ne 0 ]; then
-        echo "Initial SSH attempt unsuccessful. Please read the Pre-reqs section in the README.md file."
-        echo "Make sure PasswordAuth is set to yes on the remote server SSH config and you restarted the sshd service"
-        exit 1
+    if ! $AUTH_KEY; then
+        gen_ssh_keys
+        SSH_KEY=$(cat ~/.ssh/docker_compose_host)
+        PUB_KEY=$(cat ~/.ssh/docker_compose_host.pub)
+        ssh $HOST_OR_IP -l $SSH_USER -p $SSH_PORT "echo $PUB_KEY >> ~/.ssh/authorized_keys"
+        if [ $? -ne 0 ]; then
+            echo "Initial SSH attempt unsuccessful. Please read the Pre-reqs section in the README.md file."
+            echo "Make sure PasswordAuth is set to yes on the remote server SSH config and you restarted the sshd service"
+            exit 1
+        fi
     fi
+
     echo "Setting SSH to use the generated keys in the future"
     echo "Host docker-compose
         HostName $HOST_OR_IP
@@ -283,7 +300,7 @@ function configure_local () {
         rm -f bot_staging.env
         rm -f db_staging.env
         rm -f ../docker-compose-staging.yml
-        sed -i '/# START_STAGING_HERE/,$d' .github/workflows/prod_and_staging.yml
+        sed -i '/# START_STAGING_HERE/,$d' ../.github/workflows/prod_and_staging.yml
     fi
     mv -f *.sql ../mariadb/initscripts/
     mv -f traefik.htpasswd ../traefik/traefik.htpasswd
@@ -393,9 +410,9 @@ function print_creds () {
     fi
 }
 
-
+AUTH_KEY=false
 DEFAULTS=false
-GITHUB_SECRETS=false
+USE_GITHUB_SECRETS=false
 # Getting user input
 get_input "$@"
 echo "Configuring SSH hosts, keys, and fingerprints. Then will prompt you for the root password"
@@ -405,4 +422,4 @@ install_config_packages
 echo "Configuring local compose and env files"
 configure_local
 echo "Outputting credentials"
-print_creds $GITHUB_SECRETS
+print_creds $USE_GITHUB_SECRETS
