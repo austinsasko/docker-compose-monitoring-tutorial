@@ -95,6 +95,7 @@ function get_input () {
         cat ~/.ssh/docker_compose_host.pub
         echo
         read -s -p "Add the above public key to your server's root authorized_keys file and then press enter"
+        echo
     fi
 
     if ! $DEFAULTS; then
@@ -258,9 +259,9 @@ function install_config_packages () {
     ssh $HOST_OR_IP -l $SSH_USER -p $SSH_PORT "systemctl start node_exporter && systemctl status node_exporter && systemctl enable node_exporter"
     ssh $HOST_OR_IP -l $SSH_USER -p $SSH_PORT "systemctl start docker && systemctl status docker && systemctl enable docker"
     ssh $HOST_OR_IP -l $SSH_USER -p $SSH_PORT "systemctl start fail2ban && systemctl status fail2ban && systemctl enable fail2ban"
-    ssh $HOST_OR_IP -l $SSH_USER -p $SSH_PORT "docker plugin install grafana/loki-docker-driver:latest --alias loki --grant-all-permissions"
-    ssh $HOST_OR_IP -l $SSH_USER -p $SSH_PORT 'sed -i "s|#MaxSessions 10|MaxSessions 30|g" /etc/ssh/sshd_config'
-    ssh $HOST_OR_IP -l $SSH_USER -p $SSH_PORT "systemctl restart sshd"
+    ssh $HOST_OR_IP -l $SSH_USER -p $SSH_PORT "docker plugin install grafana/loki-docker-driver:latest --alias loki --grant-all-permissions" > /dev/null 2>&1
+    ssh $HOST_OR_IP -l $SSH_USER -p $SSH_PORT 'sed -i "s|#MaxSessions 10|MaxSessions 30|g" /etc/ssh/sshd_config' > /dev/null 2>&1
+    ssh $HOST_OR_IP -l $SSH_USER -p $SSH_PORT "systemctl restart sshd" > /dev/null 2>&1
 }
 
 function configure_local () {
@@ -370,7 +371,7 @@ function print_creds () {
         fi
         gh auth login
         gh secret set -f gh.env
-        rm -f gh.env
+        #rm -f gh.env
     else
         echo -e "\n-- ACTION REQUIRED --"
         echo "If you want a fully functional automated GH Workflow (CICD), add the following secrets to the repo"
