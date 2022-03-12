@@ -374,17 +374,18 @@ function print_creds () {
     else
         echo -e "\n-- ACTION REQUIRED --"
         echo "If you want a fully functional automated GH Workflow (CICD), add the following secrets to the repo"
+        echo "test"
         echo -e "Secret Name: KNOWN_HOSTS\nSecret Value: \n$KNOWN_HOSTS"
         echo -e "Secret Name: SSH_KEY\nSecret Value: \n$SSH_KEY"
         echo -e "Secret Name: SSH_HOST\nSecret Value: $HOST_OR_IP"
         echo -e "Secret Name: SSH_USER\nSecret Value: $SSH_USER"
         echo -e "Secret Name: SSH_PORT\nSecret Value: $SSH_PORT"
-
+echo "test2"
         echo -e "Secret Name: CF_DOMAIN\nSecret Value: $DOMAIN"
         echo -e "Secret Name: CF_ZONE_ID\nSecret Value: $CF_ZONE_ID"
         echo -e "Secret Name: CF_API_KEY\nSecret Value: $CF_API_KEY"
         echo -e "Secret Name: CF_EMAIL\nSecret Value: $CF_EMAIL"
-
+echo "test3"
         echo -e "Secret Name: DB_NAME\nSecret Value: $DB_NAME"
         echo -e "Secret Name: DB_PASS\nSecret Value: $DB_PASS"
         echo -e "Secret Name: DB_USER\nSecret Value: $DB_USER"
@@ -393,13 +394,13 @@ function print_creds () {
         echo -e "Secret Name: EXPORTER_PASS\nSecret Value: $EXPORTER_PASS"
 
         echo -e "Secret Name: DISCORD_TOKEN\nSecret Value: $DISCORD_TOKEN"
-
+echo "test4"
         echo -e "Secret Name: GF_ADMIN_USER\nSecret Value: $GRAFANA_USER"
         echo -e "Secret Name: GF_ADMIN_PASS\nSecret Value: $GRAFANA_PASS"
 
         echo -e "Secret Name: T_HTUSER\nSecret Value: $HT_USER"
         echo -e "Secret Name: T_HTPASSWD\nSecret Value: $ENC_HTPASS"
-
+echo "test5"
         if $STAGING; then
             echo -e "Secret Name: STAGING_DISCORD_TOKEN\nSecret Value: $STAGING_DISCORD_TOKEN"
             echo -e "Secret Name: DB_STAGING_NAME\nSecret Value: $DB_STAGING_NAME"
@@ -408,6 +409,7 @@ function print_creds () {
             echo -e "Secret Name: DB_STAGING_PORT\nSecret Value: $DB_STAGING_PORT"
         fi
     fi
+    echo "test6"
 }
 
 AUTH_KEY=false
@@ -423,3 +425,4 @@ echo "Configuring local compose and env files"
 configure_local
 echo "Outputting credentials"
 print_creds $USE_GITHUB_SECRETS
+echo "Test7"

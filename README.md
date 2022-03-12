@@ -90,30 +90,6 @@ The detailed breakdown of the stacks consist of three main categories of contain
           - Is accessible via bot.domain.com, the container listens on hostname python_bot_frontend and port 5000 but bot.domain.com traffic is tunneled through traefik so all HTTP/HTTPS to URL goes to container.
           - No authentication required
         * Customizations: Editing python_flask/templetas/index.html can change how users see when the page. Editing the main.py in the same directory can change what data is fetched from the DB that is presented to the users.
-    * Traefik
-        * What: Production version of a Trafeik reverse proxy container. This is the load balancer / service / middleware for all containers to receive traffic through
-        * How:
-          - Builds Traefik 2.5 container. Any docker container in the docker compose file that has a label for Traefik and has the respective configurations in the labels section (see any of the compose yml services for examples) will have its web traffic sent through Traefik. Traefik will automatically provision SSL certificiates since we configure Cloudflare and give it access.
-          - Is accessible via traefik.domain.com on port 443.
-          - No authentication required
-          - Has an endpoint for prometheus to scrape data from on port 5008 /metrics URI
-        * Customizations: The only customizations related to Traefik is managing container labels. When a service should be routed through Traefik, it should have the following labels, replacing REPLACE_ME_SERVICE_NAME with the name of the container
-        ```- traefik.enable=true
-        - traefik.http.routers.REPLACE_ME_SERVICE_NAME.rule=Host(`REPLACE_ME_EXAMPLE_SUBDOMAIN`)
-        - traefik.http.routers.REPLACE_ME_SERVICE_NAME.entrypoints=websecure
-        - traefik.http.routers.REPLACE_ME_SERVICE_NAME.tls.certresolver=dockerssl
-        - traefik.http.services.REPLACE_ME_SERVICE_NAME.loadbalancer.server.port=REPLACE_ME_DEST_CONTAINER_PORT`
-        ```
-    * Cf-Ddns
-        * What: Container used to keep Cloudflare DNS up to date, pointing the main domain's A record to this docker compose host IP
-        * How:
-          - Builds the latest oznu/cloudflare-ddns container as container `cf-ddns`.
-        * Customizations: None
-    * Cf-Companion
-        * What: Container used to keep track of all subdomains that are set up in docker-compose/traefik. Automatically provisions DNS records for new container domains through Cloudflare
-        * How:
-          - Builds the latest tiredofit/traefik-cloudflare-companion container as container `cf-companion`.
-        * Customizations: None
     * Whoami
         * What: Production version of the simple server info tool `traefik/whoami`
         * How:
@@ -179,6 +155,7 @@ The detailed breakdown of the stacks consist of three main categories of contain
           - Will build Prometheus's release of alertmanager that will manage the alerting behavior (where to send alerts to) when prometheus detects a failure in one of the scraped metric tools
           - Is not accessible to the internet, strictly an intranet container that has no ingress traffic, only egress traffic, to the world. Only monitors the host hardware and alerts to specified providers (Slack/Pagerduty/etc).
         * Customizations: Edit alertmanager/config.yml and configure the alert destinations per [AlertManager Docs](https://prometheus.io/docs/alerting/latest/configuration/)
+   * THE FOLLOWING SOFTWARE SHOULD NOT HAVE A STAGING VERSION EVER, AND AS SUCH IS IN THE MONITORING ENVIRONMENT, SO IT IS DECOUPLED FROM PROD/STAGING
    * Phpmyadmin
         * What: PHPMyAdmin Software
         * How:
@@ -186,6 +163,30 @@ The detailed breakdown of the stacks consist of three main categories of contain
           - Is accessible to the internet on pma.domain.com. Container listens on hostname phpmyadmin and port 80 but traefik forwards all http/https traffic to the container
           - Requires Pre-authentication, using the htpasswd web auth user/pass from the initial config output AND then the username/password of the DB user you want to authenticate with
         * Customizations: NA
+    * Traefik
+        * What: Production version of a Trafeik reverse proxy container. This is the load balancer / service / middleware for all containers to receive traffic through
+        * How:
+          - Builds Traefik 2.5 container. Any docker container in the docker compose file that has a label for Traefik and has the respective configurations in the labels section (see any of the compose yml services for examples) will have its web traffic sent through Traefik. Traefik will automatically provision SSL certificiates since we configure Cloudflare and give it access.
+          - Is accessible via traefik.domain.com on port 443.
+          - No authentication required
+          - Has an endpoint for prometheus to scrape data from on port 5008 /metrics URI
+        * Customizations: The only customizations related to Traefik is managing container labels. When a service should be routed through Traefik, it should have the following labels, replacing REPLACE_ME_SERVICE_NAME with the name of the container
+        ```- traefik.enable=true
+        - traefik.http.routers.REPLACE_ME_SERVICE_NAME.rule=Host(`REPLACE_ME_EXAMPLE_SUBDOMAIN`)
+        - traefik.http.routers.REPLACE_ME_SERVICE_NAME.entrypoints=websecure
+        - traefik.http.routers.REPLACE_ME_SERVICE_NAME.tls.certresolver=dockerssl
+        - traefik.http.services.REPLACE_ME_SERVICE_NAME.loadbalancer.server.port=REPLACE_ME_DEST_CONTAINER_PORT`
+        ```
+    * Cf-Ddns
+        * What: Container used to keep Cloudflare DNS up to date, pointing the main domain's A record to this docker compose host IP
+        * How:
+          - Builds the latest oznu/cloudflare-ddns container as container `cf-ddns`.
+        * Customizations: None
+    * Cf-Companion
+        * What: Container used to keep track of all subdomains that are set up in docker-compose/traefik. Automatically provisions DNS records for new container domains through Cloudflare
+        * How:
+          - Builds the latest tiredofit/traefik-cloudflare-companion container as container `cf-companion`.
+        * Customizations: None
 
 ## Docker Compose services format (file structure order)
   ### logging:

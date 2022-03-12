@@ -44,7 +44,7 @@ jobs:
         run: docker context use remote
       
       - name: Always build the monitoring stack
-        run: COMPOSE_PARAMIKO_SSH=1 COMPOSE_IGNORE_ORPHANS=1 docker-compose --context remote -f docker-compose-monitoring.yml up --build -d
+        run: COMPOSE_HTTP_TIMEOUT=600 COMPOSE_PARAMIKO_SSH=1 COMPOSE_IGNORE_ORPHANS=1 docker-compose --context remote -f docker-compose-monitoring.yml up --build -d
 
   build_and_deploy_prod:
     name: Build and deploy prod env
@@ -104,7 +104,7 @@ jobs:
         run: docker context use remote
 
       - name: Build the prod stack
-        run: COMPOSE_PARAMIKO_SSH=1 COMPOSE_IGNORE_ORPHANS=1 docker-compose --context remote up --build -d
+        run: COMPOSE_HTTP_TIMEOUT=600 COMPOSE_PARAMIKO_SSH=1 COMPOSE_IGNORE_ORPHANS=1 docker-compose --context remote up --build -d
 
 
 # START_STAGING_HERE
@@ -161,5 +161,5 @@ jobs:
         run: docker context use remote
 
       - name: Build the staging stack
-        run: COMPOSE_PARAMIKO_SSH=1 COMPOSE_IGNORE_ORPHANS=1 docker-compose --context remote -f docker-compose-staging.yml up --build -d
+        run: COMPOSE_HTTP_TIMEOUT=600 COMPOSE_PARAMIKO_SSH=1 COMPOSE_IGNORE_ORPHANS=1 docker-compose --context remote -f docker-compose-staging.yml up --build -d
         if: github.ref == 'refs/heads/staging'
