@@ -3,17 +3,19 @@
 
 function usage () { 
     cat << EOF
-    usage: $0 -d domain.com -e x@gmail.com -k cf_api_key -t discord_token -s staging_discord_token -h 1.1.1.1
+    usage: $0 -n domain.com -e x@gmail.com -k cf_api_key -t discord_token -s staging_discord_token -h 1.1.1.1 -d
 
     OPTIONS:
     -h      Show this message
-    -d      Specifies the domain registered in Cloudflare.com
+    -d      Use defaults for any prompts possible, in conjunction with the -nektspz flags, can be used to not ever prompt users except for the root password
+    -n      Specifies the domain registered in Cloudflare.com
     -e      Specifies the email address used in the Cloudflare.com account
     -k      Specifies the Cloudflare.com API Key. Needs at least DNS Read/Write. Create it here https://developers.cloudflare.com/api/tokens/create/ 
     -t      Specifies the Discord token. Follow the instructions here https://www.writebots.com/discord-bot-token/#generating_your_token_step-by-step
     -s      Specifies the Staging Discord token. Can be the same as the normal discord token if you do not want a staging discord server.
     -p      Specifies the host or IP of the docker compose host server
     -z      Specifies the Zone ID of the Cloudflare domain specified with -d https://community.cloudflare.com/t/where-to-find-zone-id/132913
+    -g      Creates the GH secrets for you using a temporary .env file for the GH client
 EOF
 }
 
@@ -36,9 +38,12 @@ function gen_alphanumeric () {
 }
 
 function get_input () {
-    while getopts "hd:e:k:t:s:p:z:" opt; do
+    while getopts "gdhn:e:k:t:s:p:z:" opt; do
         case ${opt} in
             d )
+                DEFAULTS=true
+                ;;
+            n )
                 DOMAIN=$OPTARG
                 ;;
             e )
@@ -59,22 +64,38 @@ function get_input () {
             z )
                 CF_ZONE_ID=$OPTARG
                 ;;
+            g )
+                GITHUB_SECRETS=true
+                ;;
             h )
                 usage
                 exit 1
                 ;;
             * )
                 echo "Invalid Option: -$OPTARG" 1>&2
-                echo "Usage: -d [Domain.com] -e [Cloudflare Email] -k [Cloudflare API Key]\
-                -t [Discord Token] -s [Staging Discord Token] -h 1.1.1.1"
-                echo "  e.g. -d domain.com -e x@gmail.com -k cf_api_key -t discord_token -s staging_discord_token -h 1.1.1.1"
+                echo "Usage: -n [Domain.com] -e [Cloudflare Email] -k [Cloudflare API Key]\
+                -t [Discord Token] -s [Staging Discord Token] -h 1.1.1.1 -d -g"
+                echo "  e.g. -n domain.com -e x@gmail.com -k cf_api_key -t discord_token -s staging_discord_token -h 1.1.1.1 -d -g"
                 exit 1
                 ;;
         esac
     done
 
-    echo "You will now be asked for information to help us configure your system for docker compose. Press enter to use the default value in []."
-    read -p 'Do you want a staging env - recommended [y]: ' STAGING
+    if $DEFAULTS; then
+        STAGING="yes"
+        GITHUB_SECRETS=true
+    else
+        echo "You will now be asked for information to help us configure your system for docker compose. Press enter to use the default value in []."
+        read -p 'Do you want a staging env - recommended [y]: ' STAGING
+        read -p 'Do you want this script to auto configure your GH repo secrets? - recommended [y]: ' GITHUB_SECRETS
+        GITHUB_SECRETS=${GITHUB_SECRETS:-y}
+        GITHUB_SECRETS_TRIM=$(echo "${GITHUB_SECRETS:0:1}" | tr '[:upper:]' '[:lower:]')
+        if [ "$GITHUB_SECRETS_TRIM" == "y" ]; then
+            GITHUB_SECRETS=true
+        else
+            GITHUB_SECRETS=false
+        fi
+    fi
     if [ -z "$DOMAIN" ]; then
         read -p 'Registered domain in Cloudflare: ' DOMAIN
     fi
@@ -90,7 +111,7 @@ function get_input () {
     if [ -z "$DISCORD_TOKEN" ]; then
         read -p 'Discord Token (https://www.writebots.com/discord-bot-token/#generating_your_token_step-by-step): ' DISCORD_TOKEN
     fi
-    STAGING=${STAGING:-y}
+    STAGING="${STAGING:-y}"
     AUTO_CHECK=$(echo "${STAGING:0:1}" | tr '[:upper:]' '[:lower:]')
     if [ "$STAGING" == "y" ]; then
         STAGING=true
@@ -105,14 +126,20 @@ function get_input () {
     if [ -z "$HOST_OR_IP" ]; then
         read -p 'SSH Host / IP: ' HOST_OR_IP
     fi
-    read -p 'SSH Username [root]: ' SSH_USER
-    SSH_USER=${SSH_USER:-root}
-    read -p 'SSH Port [22]: ' SSH_PORT
-    SSH_PORT=${SSH_PORT:-22}
-    read -p 'Would you like me to generate all remaining parameters (datatabase name, DB & Grafana username, DB & Grafana pass, and HTPASSWD values)? [y]: ' AUTO
+    if $DEFAULTS; then
+        SSH_USER="root"
+        SSH_PORT="22"
+        AUTO="yes"
+    else
+        read -p 'SSH Username [root]: ' SSH_USER
+        SSH_USER=${SSH_USER:-root}
+        read -p 'SSH Port [22]: ' SSH_PORT
+        SSH_PORT=${SSH_PORT:-22}
+        read -p 'Would you like me to generate all remaining parameters (datatabase name, DB & Grafana username, DB & Grafana pass, and HTPASSWD values)? [y]: ' AUTO
+    fi
     AUTO=${AUTO:-y}
     AUTO_CHECK=$(echo "${AUTO:0:1}" | tr '[:upper:]' '[:lower:]')
-    if [ "$AUTO" == "y" ]; then
+    if [ "$AUTO_CHECK" == "y" ]; then
         DB_NAME=$(gen_alphanumeric 4)
         DB_NAME="dbn_$DB_NAME"
         DB_USER=$(gen_alphanumeric 7)
@@ -156,7 +183,9 @@ function get_input () {
 }
 
 function ssh_key_and_config () {
+    rm -f ~/.ssh/docker_compose_host
     mv ~/.ssh/config ~/.ssh/config.bak 2>/dev/null
+    mv ~/.ssh/known_hosts ~/.ssh/known_hosts.bak 2>/dev/null
     KNOWN_HOSTS=$(ssh-keyscan -H $HOST_OR_IP 2>&1)
     echo "$KNOWN_HOSTS" >> ~/.ssh/known_hosts 
     ssh-keygen -t rsa -b 4096 -C "docker_compose_client_script" -N "" -f ~/.ssh/docker_compose_host
@@ -232,7 +261,7 @@ function configure_local () {
     find . \( -type d -name .git -prune \) -o -type f ! -name configure.sh ! -name "*.example" -print0 | xargs -0 sed -i "s|REPLACE_ME_DB_USER_PASS|$DB_PASS|g"
     find . \( -type d -name .git -prune \) -o -type f ! -name configure.sh ! -name "*.example" -print0 | xargs -0 sed -i "s|REPLACE_ME_DB_USER|$DB_USER|g"
     find . \( -type d -name .git -prune \) -o -type f ! -name configure.sh ! -name "*.example" -print0 | xargs -0 sed -i "s|REPLACE_ME_DB_ROOT_PASS|$DB_ROOT_PASS|g"
-    find ../. \( -type d -name .git -prune \) -o -type f ! -name configure.sh ! -name "*.example" ! -name "prod*.yml" -print0 | xargs -0 sed -i "s|REPLACE_ME_DOMAIN|$DOMAIN|g"
+    find ../. \( -type d -name .git -prune \) -o -type f ! -name "sql_conn.cnf" ! -name configure.sh ! -name "*.example" ! -name "prod*.yml" -print0 | xargs -0 sed -i "s|REPLACE_ME_DOMAIN|$DOMAIN|g"
     find . \( -type d -name .git -prune \) -o -type f ! -name configure.sh ! -name "*.example" -print0 | xargs -0 sed -i "s|REPLACE_ME_CF_EMAIL|$CF_EMAIL|g"
     find . \( -type d -name .git -prune \) -o -type f ! -name configure.sh ! -name "*.example" -print0 | xargs -0 sed -i "s|REPLACE_ME_CF_DNS_API_TOKEN|$CF_API_KEY|g"
     find . \( -type d -name .git -prune \) -o -type f ! -name configure.sh ! -name "*.example" -print0 | xargs -0 sed -i "s|REPLACE_ME_ZONE_ID|$CF_ZONE_ID|g"
@@ -264,6 +293,7 @@ function configure_local () {
 }
 
 function print_creds () {
+    configure_gh_secrets=$1
     echo "Configured $HOST_OR_IP to be docker-compose ready. Please save these credentials"
     echo -e "\n-- DB --"
     echo "DB Root Pass is $DB_ROOT_PASS"
@@ -285,43 +315,88 @@ function print_creds () {
         echo "Staging DB Pass is $DB_STAGING_PASS"
         echo "Staging DB Port is $DB_STAGING_PORT"
     fi
-    echo -e "\n-- ACTION REQUIRED --"
-    echo "If you want a fully functional automated GH Workflow (CICD), add the following secrets to the repo"
-    echo -e "Secret Name: KNOWN_HOSTS\nSecret Value: \n$KNOWN_HOSTS"
-    echo -e "Secret Name: SSH_KEY\nSecret Value: \n$SSH_KEY"
-    echo -e "Secret Name: SSH_HOST\nSecret Value: $HOST_OR_IP"
-    echo -e "Secret Name: SSH_USER\nSecret Value: $SSH_USER"
-    echo -e "Secret Name: SSH_PORT\nSecret Value: $SSH_PORT"
+    if $configure_gh_secrets; then
+        > gh.env
+        KNOWN_HOSTS=$(echo -n "$KNOWN_HOSTS" | sed -z 's/\n/\\n/g')
+        SSH_KEY=$(echo -n "$SSH_KEY" | sed -z 's/\n/\\n/g')
+        echo "KNOWN_HOSTS='$KNOWN_HOSTS'" >> gh.env
+        echo "SSH_KEY='$SSH_KEY'" >> gh.env
+        echo "SSH_HOST=$HOST_OR_IP" >> gh.env
+        echo "SSH_USER=$SSH_USER" >> gh.env
+        echo "SSH_PORT=$SSH_PORT" >> gh.env
 
-    echo -e "Secret Name: CF_DOMAIN\nSecret Value: $DOMAIN"
-    echo -e "Secret Name: CF_ZONE_ID\nSecret Value: $CF_ZONE_ID"
-    echo -e "Secret Name: CF_API_KEY\nSecret Value: $CF_API_KEY"
-    echo -e "Secret Name: CF_EMAIL\nSecret Value: $CF_EMAIL"
+        echo "CF_DOMAIN=$DOMAIN" >> gh.env
+        echo "CF_ZONE_ID=$CF_ZONE_ID" >> gh.env
+        echo "CF_API_KEY=$CF_API_KEY" >> gh.env
+        echo "CF_EMAIL=$CF_EMAIL" >> gh.env
 
-    echo -e "Secret Name: DB_NAME\nSecret Value: $DB_NAME"
-    echo -e "Secret Name: DB_PASS\nSecret Value: $DB_PASS"
-    echo -e "Secret Name: DB_USER\nSecret Value: $DB_USER"
-    echo -e "Secret Name: DB_DATASOURCE\nSecret Value: $DATA_SOURCE_NAME"
-    echo -e "Secret Name: DBC_STRING\nSecret Value: $DB_CONNECTION_STRING"
-    echo -e "Secret Name: EXPORTER_PASS\nSecret Value: $EXPORTER_PASS"
+        echo "DB_NAME=$DB_NAME" >> gh.env
+        echo "DB_PASS=$DB_PASS" >> gh.env
+        echo "DB_USER=$DB_USER" >> gh.env
+        echo "DB_DATASOURCE=$DATA_SOURCE_NAME" >> gh.env
+        echo "DBC_STRING=$DB_CONNECTION_STRING" >> gh.env
+        echo "EXPORTER_PASS=$EXPORTER_PASS" >> gh.env
 
-    echo -e "Secret Name: DISCORD_TOKEN\nSecret Value: $DISCORD_TOKEN"
+        echo "DISCORD_TOKEN=$DISCORD_TOKEN" >> gh.env
 
-    echo -e "Secret Name: GF_ADMIN_USER\nSecret Value: $GRAFANA_USER"
-    echo -e "Secret Name: GF_ADMIN_PASS\nSecret Value: $GRAFANA_PASS"
+        echo "GF_ADMIN_USER=$GRAFANA_USER" >> gh.env
+        echo "GF_ADMIN_PASS=$GRAFANA_PASS" >> gh.env
 
-    echo -e "Secret Name: T_HTUSER\nSecret Value: $HT_USER"
-    echo -e "Secret Name: T_HTPASSWD\nSecret Value: $ENC_HTPASS"
+        echo "T_HTUSER=$HT_USER" >> gh.env
+        echo "T_HTPASSWD=$ENC_HTPASS" >> gh.env
 
-    if $STAGING; then
-        echo -e "Secret Name: STAGING_DISCORD_TOKEN\nSecret Value: $STAGING_DISCORD_TOKEN"
-        echo -e "Secret Name: DB_STAGING_NAME\nSecret Value: $DB_STAGING_NAME"
-        echo -e "Secret Name: DB_STAGING_USER_PASS\nSecret Value: $DB_STAGING_PASS"
-        echo -e "Secret Name: DB_STAGING_USER\nSecret Value: $DB_STAGING_USER"
-        echo -e "Secret Name: DB_STAGING_PORT\nSecret Value: $DB_STAGING_PORT"
+        if $STAGING; then
+            echo "STAGING_DISCORD_TOKEN=$STAGING_DISCORD_TOKEN" >> gh.env
+            echo "DB_STAGING_NAME=$DB_STAGING_NAME" >> gh.env
+            echo "DB_STAGING_USER_PASS=$DB_STAGING_PASS" >> gh.env
+            echo "DB_STAGING_USER=$DB_STAGING_USER" >> gh.env
+            echo "DB_STAGING_PORT=$DB_STAGING_PORT" >> gh.env
+        fi
+        gh auth login
+        gh secret set -f gh.env
+        rm -f gh.env
+    else
+        echo -e "\n-- ACTION REQUIRED --"
+        echo "If you want a fully functional automated GH Workflow (CICD), add the following secrets to the repo"
+        echo -e "Secret Name: KNOWN_HOSTS\nSecret Value: \n$KNOWN_HOSTS"
+        echo -e "Secret Name: SSH_KEY\nSecret Value: \n$SSH_KEY"
+        echo -e "Secret Name: SSH_HOST\nSecret Value: $HOST_OR_IP"
+        echo -e "Secret Name: SSH_USER\nSecret Value: $SSH_USER"
+        echo -e "Secret Name: SSH_PORT\nSecret Value: $SSH_PORT"
+
+        echo -e "Secret Name: CF_DOMAIN\nSecret Value: $DOMAIN"
+        echo -e "Secret Name: CF_ZONE_ID\nSecret Value: $CF_ZONE_ID"
+        echo -e "Secret Name: CF_API_KEY\nSecret Value: $CF_API_KEY"
+        echo -e "Secret Name: CF_EMAIL\nSecret Value: $CF_EMAIL"
+
+        echo -e "Secret Name: DB_NAME\nSecret Value: $DB_NAME"
+        echo -e "Secret Name: DB_PASS\nSecret Value: $DB_PASS"
+        echo -e "Secret Name: DB_USER\nSecret Value: $DB_USER"
+        echo -e "Secret Name: DB_DATASOURCE\nSecret Value: $DATA_SOURCE_NAME"
+        echo -e "Secret Name: DBC_STRING\nSecret Value: $DB_CONNECTION_STRING"
+        echo -e "Secret Name: EXPORTER_PASS\nSecret Value: $EXPORTER_PASS"
+
+        echo -e "Secret Name: DISCORD_TOKEN\nSecret Value: $DISCORD_TOKEN"
+
+        echo -e "Secret Name: GF_ADMIN_USER\nSecret Value: $GRAFANA_USER"
+        echo -e "Secret Name: GF_ADMIN_PASS\nSecret Value: $GRAFANA_PASS"
+
+        echo -e "Secret Name: T_HTUSER\nSecret Value: $HT_USER"
+        echo -e "Secret Name: T_HTPASSWD\nSecret Value: $ENC_HTPASS"
+
+        if $STAGING; then
+            echo -e "Secret Name: STAGING_DISCORD_TOKEN\nSecret Value: $STAGING_DISCORD_TOKEN"
+            echo -e "Secret Name: DB_STAGING_NAME\nSecret Value: $DB_STAGING_NAME"
+            echo -e "Secret Name: DB_STAGING_USER_PASS\nSecret Value: $DB_STAGING_PASS"
+            echo -e "Secret Name: DB_STAGING_USER\nSecret Value: $DB_STAGING_USER"
+            echo -e "Secret Name: DB_STAGING_PORT\nSecret Value: $DB_STAGING_PORT"
+        fi
     fi
 }
 
+
+DEFAULTS=false
+GITHUB_SECRETS=false
 # Getting user input
 get_input "$@"
 echo "Configuring SSH hosts, keys, and fingerprints. Then will prompt you for the root password"
@@ -331,4 +406,4 @@ install_config_packages
 echo "Configuring local compose and env files"
 configure_local
 echo "Outputting credentials"
-print_creds
+print_creds $GITHUB_SECRETS

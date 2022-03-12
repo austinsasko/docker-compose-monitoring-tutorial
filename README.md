@@ -35,13 +35,13 @@
   - `docker-compose -f docker-compose.yml up -d --build`
 
 - Access your containers at the following URLs (Once configure.sh is ran, these will be auto-replaced to thec orrect domain)
-  - [Traefik](traefik.REPLACE_ME_DOMAIN.com)
-  - [Grafana](grafana.REPLACE_ME_DOMAIN.com)
-  - [Whoami tool](whoami.REPLACE_ME_DOMAIN.com)
-  - [Prometheus](prometheus.REPLACE_ME_DOMAIN.com)
-  - [Discord Bot Frontend](bot.REPLACE_ME_DOMAIN.com)
-  - [Discord Bot Staging Frontend](bot-staging.REPLACE_ME_DOMAIN.com)
-  - [PHPMyAdmin](pma.REPLACE_ME_DOMAIN.com)
+  - [Traefik](traefik.REPLACE_ME_DOMAIN)
+  - [Grafana](grafana.REPLACE_ME_DOMAIN)
+  - [Whoami tool](whoami.REPLACE_ME_DOMAIN)
+  - [Prometheus](prometheus.REPLACE_ME_DOMAIN)
+  - [Discord Bot Frontend](bot.REPLACE_ME_DOMAIN)
+  - [Discord Bot Staging Frontend](bot-staging.REPLACE_ME_DOMAIN)
+  - [PHPMyAdmin](pma.REPLACE_ME_DOMAIN)
 
 ## Description
 This repository is intended to imitate a full enterprise stack for any dockerized app (in this case its a Python discord bot).
