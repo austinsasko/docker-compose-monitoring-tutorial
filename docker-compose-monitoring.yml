@@ -4,7 +4,7 @@ x-logging: &logging
   logging:
     driver: loki
     options:
-      loki-url: http://host.docker.internal:3100:3100/loki/api/v1/push
+      loki-url: http://host.docker.internal:3100/loki/api/v1/push
 
 services:
   loki:
