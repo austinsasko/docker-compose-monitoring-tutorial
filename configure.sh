@@ -279,12 +279,11 @@ function configure_local () {
         find . \( -type d -name .git -prune \) -o -type f ! -name configure.sh ! -name "*.example" -print0 | xargs -0 sed -i "s|REPLACE_ME_DB_STAGING_USER|$DB_STAGING_USER|g"
         find . \( -type d -name .git -prune \) -o -type f ! -name configure.sh ! -name "*.example" -print0 | xargs -0 sed -i "s|REPLACE_ME_DB_STAGING_ROOT_PASS|$DB_STAGING_ROOT_PASS|g"
         find . \( -type d -name .git -prune \) -o -type f ! -name configure.sh ! -name "*.example" -print0 | xargs -0 sed -i "s|REPLACE_ME_DB_STAGING_PORT|$DB_STAGING_PORT|g"
-        rm -f ../.github/workflows/prod.yml
     else
         rm -f bot_staging.env
         rm -f db_staging.env
         rm -f ../docker-compose-staging.yml
-        rm -f ../.github/workflows/prod_and_staging.yml
+        sed -i '/# START_STAGING_HERE/,$d' .github/workflows/prod_and_staging.yml
     fi
     mv -f *.sql ../mariadb/initscripts/
     mv -f traefik.htpasswd ../traefik/traefik.htpasswd
