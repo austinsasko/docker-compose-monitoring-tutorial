@@ -4,4 +4,4 @@
 *.htpasswd
 keys.json
 query_exporter/query_exporter_config.yaml
-initscripts/
+mariadb/initscripts/*.sql
