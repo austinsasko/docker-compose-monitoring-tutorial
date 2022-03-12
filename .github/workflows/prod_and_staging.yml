@@ -25,6 +25,20 @@ jobs:
           
           cp custom/query_exporter_config.yaml.example query_exporter/query_exporter_config.yaml
           sed -i "s|REPLACE_ME_DB_NAME|${{ secrets.DB_NAME }}|g" query_exporter/query_exporter_config.yaml
+
+      - name: Save secrets to traefik.env files
+        run: |
+          cp custom/traefik.env.example custom/traefik.env
+          sed -i "s|REPLACE_ME_CF_EMAIL|${{ secrets.CF_EMAIL }}|g" custom/traefik.env
+          sed -i "s|REPLACE_ME_CF_DNS_API_TOKEN|${{ secrets.CF_API_KEY }}|g" custom/traefik.env
+          sed -i "s|REPLACE_ME_DOMAIN|${{ secrets.DOMAIN }}|g" custom/traefik.env docker-compose*
+          sed -i "s|REPLACE_ME_ZONE_ID|${{ secrets.CF_ZONE_ID }}|g" custom/traefik.env
+
+      - name: Save secrets to traefik htpasswd file
+        run: |
+          cp custom/traefik.htpasswd.example traefik/traefik.htpasswd
+          sed -i "s|REPLACE_ME_WEB_AUTH_USER|${{ secrets.T_HTUSER }}|g" traefik/traefik.htpasswd
+          sed -i "s|REPLACE_ME_WEB_AUTH_BCRYPT_PASSWORD|${{ secrets.T_HTPASSWD }}|g" traefik/traefik.htpasswd
       
       - name: Setup SSH stuff
         run: |
@@ -53,20 +67,6 @@ jobs:
     if: github.ref == 'refs/heads/main'
     steps:
       - uses: actions/checkout@v2
-
-      - name: Save secrets to traefik.env files
-        run: |
-          cp custom/traefik.env.example custom/traefik.env
-          sed -i "s|REPLACE_ME_CF_EMAIL|${{ secrets.CF_EMAIL }}|g" custom/traefik.env
-          sed -i "s|REPLACE_ME_CF_DNS_API_TOKEN|${{ secrets.CF_API_KEY }}|g" custom/traefik.env
-          sed -i "s|REPLACE_ME_DOMAIN|${{ secrets.DOMAIN }}|g" custom/traefik.env docker-compose*
-          sed -i "s|REPLACE_ME_ZONE_ID|${{ secrets.CF_ZONE_ID }}|g" custom/traefik.env
-
-      - name: Save secrets to traefik htpasswd file
-        run: |
-          cp custom/traefik.htpasswd.example traefik/traefik.htpasswd
-          sed -i "s|REPLACE_ME_WEB_AUTH_USER|${{ secrets.T_HTUSER }}|g" traefik/traefik.htpasswd
-          sed -i "s|REPLACE_ME_WEB_AUTH_BCRYPT_PASSWORD|${{ secrets.T_HTPASSWD }}|g" traefik/traefik.htpasswd
       
       - name: Setup SSH stuff
         run: |
