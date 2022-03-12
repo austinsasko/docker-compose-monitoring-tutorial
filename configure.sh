@@ -93,8 +93,8 @@ function get_input () {
     if $AUTH_KEY; then
         gen_ssh_keys
         cat ~/.ssh/docker_compose_host.pub
-        echo "Add the above public key to your server's root authorized_keys file and then press enter"
-        read
+        echo
+        read -s -p "Add the above public key to your server's root authorized_keys file and then press enter"
     fi
 
     if ! $DEFAULTS; then
@@ -269,33 +269,33 @@ function configure_local () {
     for file in *.example; do
         cp -- "$file" "${file%%.example}"
     done
-
     docker context rm docker_compose_tut -f 2>/dev/null
     docker context create docker_compose_tut --docker "host=ssh://$SSH_USER@$HOST_OR_IP:$SSH_PORT"
     docker context use docker_compose_tut
-    find . \( -type d -name .git -prune \) -o -type f ! -name configure.sh ! -name "*.example" -print0 | xargs -0 sed -i "s|REPLACE_ME_DISCORD_TOKEN|$DISCORD_TOKEN|g"
-    find . \( -type d -name .git -prune \) -o -type f ! -name configure.sh ! -name "*.example" -print0 | xargs -0 sed -i "s|REPLACE_ME_DB_NAME|$DB_NAME|g"
-    find . \( -type d -name .git -prune \) -o -type f ! -name configure.sh ! -name "*.example" -print0 | xargs -0 sed -i "s|REPLACE_ME_DB_USER_PASS|$DB_PASS|g"
-    find . \( -type d -name .git -prune \) -o -type f ! -name configure.sh ! -name "*.example" -print0 | xargs -0 sed -i "s|REPLACE_ME_DB_USER|$DB_USER|g"
-    find . \( -type d -name .git -prune \) -o -type f ! -name configure.sh ! -name "*.example" -print0 | xargs -0 sed -i "s|REPLACE_ME_DB_ROOT_PASS|$DB_ROOT_PASS|g"
-    find ../. \( -type d -name .git -prune \) -o -type f ! -name "sql_conn.cnf" ! -name configure.sh ! -name "*.example" ! -name "prod*.yml" -print0 | xargs -0 sed -i "s|REPLACE_ME_DOMAIN|$DOMAIN|g"
-    find . \( -type d -name .git -prune \) -o -type f ! -name configure.sh ! -name "*.example" -print0 | xargs -0 sed -i "s|REPLACE_ME_CF_EMAIL|$CF_EMAIL|g"
-    find . \( -type d -name .git -prune \) -o -type f ! -name configure.sh ! -name "*.example" -print0 | xargs -0 sed -i "s|REPLACE_ME_CF_DNS_API_TOKEN|$CF_API_KEY|g"
-    find . \( -type d -name .git -prune \) -o -type f ! -name configure.sh ! -name "*.example" -print0 | xargs -0 sed -i "s|REPLACE_ME_ZONE_ID|$CF_ZONE_ID|g"
-    find . \( -type d -name .git -prune \) -o -type f ! -name configure.sh ! -name "*.example" -print0 | xargs -0 sed -i "s|REPLACE_ME_WEB_AUTH_USER|$HT_USER|g"
-    find . \( -type d -name .git -prune \) -o -type f ! -name configure.sh ! -name "*.example" -print0 | xargs -0 sed -i "s|REPLACE_ME_WEB_AUTH_BCRYPT_PASSWORD|$ENC_HTPASS|g"
-    find . \( -type d -name .git -prune \) -o -type f ! -name configure.sh ! -name "*.example" -print0 | xargs -0 sed -i "s|REPLACE_ME_GRAFANA_USER|$GRAFANA_USER|g"
-    find . \( -type d -name .git -prune \) -o -type f ! -name configure.sh ! -name "*.example" -print0 | xargs -0 sed -i "s|REPLACE_ME_GRAFANA_PASS|$GRAFANA_PASS|g"
-    find . \( -type d -name .git -prune \) -o -type f ! -name configure.sh ! -name "*.example" -print0 | xargs -0 sed -i "s|REPLACE_ME_DATASOURCE_NAME|$DATA_SOURCE_NAME|g"
-    find . \( -type d -name .git -prune \) -o -type f ! -name configure.sh ! -name "*.example" -print0 | xargs -0 sed -i "s|REPLACE_ME_DBC_STRING|$DB_CONNECTION_STRING|g"
-    find . \( -type d -name .git -prune \) -o -type f ! -name configure.sh ! -name "*.example" -print0 | xargs -0 sed -i "s|REPLACE_ME_EXPORTER_PASS|$EXPORTER_PASS|g"
+    find . \( -type d -name .git -prune \) -o -type f ! -name "*.example" -print0 | xargs -0 sed -i "s|REPLACE_ME_DISCORD_TOKEN|$DISCORD_TOKEN|g"
+    find . \( -type d -name .git -prune \) -o -type f ! -name "*.example" -print0 | xargs -0 sed -i "s|REPLACE_ME_DB_NAME|$DB_NAME|g"
+    find . \( -type d -name .git -prune \) -o -type f ! -name "*.example" -print0 | xargs -0 sed -i "s|REPLACE_ME_DB_USER_PASS|$DB_PASS|g"
+    find . \( -type d -name .git -prune \) -o -type f ! -name "*.example" -print0 | xargs -0 sed -i "s|REPLACE_ME_DB_USER|$DB_USER|g"
+    find . \( -type d -name .git -prune \) -o -type f ! -name "*.example" -print0 | xargs -0 sed -i "s|REPLACE_ME_DB_ROOT_PASS|$DB_ROOT_PASS|g"
+    find ../. \( -type d -name .git -prune \) -o -type f -name "README.md" -o -name "docker*.yml" -print0 | xargs -0 sed -i "s|REPLACE_ME_DOMAIN|$DOMAIN|g"
+    find . \( -type d -name .git -prune \) -o -type f ! -name "*.example" -print0 | xargs -0 sed -i "s|REPLACE_ME_DOMAIN|$DOMAIN|g"
+    find . \( -type d -name .git -prune \) -o -type f ! -name "*.example" -print0 | xargs -0 sed -i "s|REPLACE_ME_CF_EMAIL|$CF_EMAIL|g"
+    find . \( -type d -name .git -prune \) -o -type f ! -name "*.example" -print0 | xargs -0 sed -i "s|REPLACE_ME_CF_DNS_API_TOKEN|$CF_API_KEY|g"
+    find . \( -type d -name .git -prune \) -o -type f ! -name "*.example" -print0 | xargs -0 sed -i "s|REPLACE_ME_ZONE_ID|$CF_ZONE_ID|g"
+    find . \( -type d -name .git -prune \) -o -type f ! -name "*.example" -print0 | xargs -0 sed -i "s|REPLACE_ME_WEB_AUTH_USER|$HT_USER|g"
+    find . \( -type d -name .git -prune \) -o -type f ! -name "*.example" -print0 | xargs -0 sed -i "s|REPLACE_ME_WEB_AUTH_BCRYPT_PASSWORD|$ENC_HTPASS|g"
+    find . \( -type d -name .git -prune \) -o -type f ! -name "*.example" -print0 | xargs -0 sed -i "s|REPLACE_ME_GRAFANA_USER|$GRAFANA_USER|g"
+    find . \( -type d -name .git -prune \) -o -type f ! -name "*.example" -print0 | xargs -0 sed -i "s|REPLACE_ME_GRAFANA_PASS|$GRAFANA_PASS|g"
+    find . \( -type d -name .git -prune \) -o -type f ! -name "*.example" -print0 | xargs -0 sed -i "s|REPLACE_ME_DATASOURCE_NAME|$DATA_SOURCE_NAME|g"
+    find . \( -type d -name .git -prune \) -o -type f ! -name "*.example" -print0 | xargs -0 sed -i "s|REPLACE_ME_DBC_STRING|$DB_CONNECTION_STRING|g"
+    find . \( -type d -name .git -prune \) -o -type f ! -name "*.example" -print0 | xargs -0 sed -i "s|REPLACE_ME_EXPORTER_PASS|$EXPORTER_PASS|g"
     if $STAGING; then
-        find . \( -type d -name .git -prune \) -o -type f ! -name configure.sh ! -name "*.example" -print0 | xargs -0 sed -i "s|REPLACE_ME_DISCORD_STAGING_TOKEN|$STAGING_DISCORD_TOKEN|g"
-        find . \( -type d -name .git -prune \) -o -type f ! -name configure.sh ! -name "*.example" -print0 | xargs -0 sed -i "s|REPLACE_ME_DB_STAGING_NAME|$DB_STAGING_NAME|g"
-        find . \( -type d -name .git -prune \) -o -type f ! -name configure.sh ! -name "*.example" -print0 | xargs -0 sed -i "s|REPLACE_ME_DB_STAGING_USER_PASS|$DB_STAGING_PASS|g"
-        find . \( -type d -name .git -prune \) -o -type f ! -name configure.sh ! -name "*.example" -print0 | xargs -0 sed -i "s|REPLACE_ME_DB_STAGING_USER|$DB_STAGING_USER|g"
-        find . \( -type d -name .git -prune \) -o -type f ! -name configure.sh ! -name "*.example" -print0 | xargs -0 sed -i "s|REPLACE_ME_DB_STAGING_ROOT_PASS|$DB_STAGING_ROOT_PASS|g"
-        find . \( -type d -name .git -prune \) -o -type f ! -name configure.sh ! -name "*.example" -print0 | xargs -0 sed -i "s|REPLACE_ME_DB_STAGING_PORT|$DB_STAGING_PORT|g"
+        find . \( -type d -name .git -prune \) -o -type f ! -name "*.example" -print0 | xargs -0 sed -i "s|REPLACE_ME_DISCORD_STAGING_TOKEN|$STAGING_DISCORD_TOKEN|g"
+        find . \( -type d -name .git -prune \) -o -type f ! -name "*.example" -print0 | xargs -0 sed -i "s|REPLACE_ME_DB_STAGING_NAME|$DB_STAGING_NAME|g"
+        find . \( -type d -name .git -prune \) -o -type f ! -name "*.example" -print0 | xargs -0 sed -i "s|REPLACE_ME_DB_STAGING_USER_PASS|$DB_STAGING_PASS|g"
+        find . \( -type d -name .git -prune \) -o -type f ! -name "*.example" -print0 | xargs -0 sed -i "s|REPLACE_ME_DB_STAGING_USER|$DB_STAGING_USER|g"
+        find . \( -type d -name .git -prune \) -o -type f ! -name "*.example" -print0 | xargs -0 sed -i "s|REPLACE_ME_DB_STAGING_ROOT_PASS|$DB_STAGING_ROOT_PASS|g"
+        find . \( -type d -name .git -prune \) -o -type f ! -name "*.example" -print0 | xargs -0 sed -i "s|REPLACE_ME_DB_STAGING_PORT|$DB_STAGING_PORT|g"
     else
         rm -f bot_staging.env
         rm -f db_staging.env
@@ -374,18 +374,18 @@ function print_creds () {
     else
         echo -e "\n-- ACTION REQUIRED --"
         echo "If you want a fully functional automated GH Workflow (CICD), add the following secrets to the repo"
-        echo "test"
+
         echo -e "Secret Name: KNOWN_HOSTS\nSecret Value: \n$KNOWN_HOSTS"
         echo -e "Secret Name: SSH_KEY\nSecret Value: \n$SSH_KEY"
         echo -e "Secret Name: SSH_HOST\nSecret Value: $HOST_OR_IP"
         echo -e "Secret Name: SSH_USER\nSecret Value: $SSH_USER"
         echo -e "Secret Name: SSH_PORT\nSecret Value: $SSH_PORT"
-echo "test2"
+
         echo -e "Secret Name: CF_DOMAIN\nSecret Value: $DOMAIN"
         echo -e "Secret Name: CF_ZONE_ID\nSecret Value: $CF_ZONE_ID"
         echo -e "Secret Name: CF_API_KEY\nSecret Value: $CF_API_KEY"
         echo -e "Secret Name: CF_EMAIL\nSecret Value: $CF_EMAIL"
-echo "test3"
+
         echo -e "Secret Name: DB_NAME\nSecret Value: $DB_NAME"
         echo -e "Secret Name: DB_PASS\nSecret Value: $DB_PASS"
         echo -e "Secret Name: DB_USER\nSecret Value: $DB_USER"
@@ -394,13 +394,13 @@ echo "test3"
         echo -e "Secret Name: EXPORTER_PASS\nSecret Value: $EXPORTER_PASS"
 
         echo -e "Secret Name: DISCORD_TOKEN\nSecret Value: $DISCORD_TOKEN"
-echo "test4"
+
         echo -e "Secret Name: GF_ADMIN_USER\nSecret Value: $GRAFANA_USER"
         echo -e "Secret Name: GF_ADMIN_PASS\nSecret Value: $GRAFANA_PASS"
 
         echo -e "Secret Name: T_HTUSER\nSecret Value: $HT_USER"
         echo -e "Secret Name: T_HTPASSWD\nSecret Value: $ENC_HTPASS"
-echo "test5"
+
         if $STAGING; then
             echo -e "Secret Name: STAGING_DISCORD_TOKEN\nSecret Value: $STAGING_DISCORD_TOKEN"
             echo -e "Secret Name: DB_STAGING_NAME\nSecret Value: $DB_STAGING_NAME"
@@ -409,7 +409,7 @@ echo "test5"
             echo -e "Secret Name: DB_STAGING_PORT\nSecret Value: $DB_STAGING_PORT"
         fi
     fi
-    echo "test6"
+
 }
 
 AUTH_KEY=false
@@ -417,7 +417,7 @@ DEFAULTS=false
 USE_GITHUB_SECRETS=false
 # Getting user input
 get_input "$@"
-echo "Configuring SSH hosts, keys, and fingerprints. Then will prompt you for the root password"
+echo "Configuring SSH hosts, keys, and fingerprints. Then will prompt you for the root password if you did not use -a flag"
 ssh_key_and_config
 echo "Running server side scripts"
 install_config_packages
@@ -425,4 +425,3 @@ echo "Configuring local compose and env files"
 configure_local
 echo "Outputting credentials"
 print_creds $USE_GITHUB_SECRETS
-echo "Test7"
