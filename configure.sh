@@ -196,6 +196,8 @@ function gen_ssh_keys() {
     rm -f ~/.ssh/docker_compose_host
     mv ~/.ssh/config ~/.ssh/config.bak 2>/dev/null
     ssh-keygen -t rsa -b 4096 -C "docker_compose_client_script" -N "" -f ~/.ssh/docker_compose_host
+    SSH_KEY=$(cat ~/.ssh/docker_compose_host)
+    PUB_KEY=$(cat ~/.ssh/docker_compose_host.pub)
 }
 
 function ssh_key_and_config () {
@@ -205,8 +207,6 @@ function ssh_key_and_config () {
     echo "$KNOWN_HOSTS" >> ~/.ssh/known_hosts 
     if ! $AUTH_KEY; then
         gen_ssh_keys
-        SSH_KEY=$(cat ~/.ssh/docker_compose_host)
-        PUB_KEY=$(cat ~/.ssh/docker_compose_host.pub)
         ssh $HOST_OR_IP -l $SSH_USER -p $SSH_PORT "echo $PUB_KEY >> ~/.ssh/authorized_keys"
         if [ $? -ne 0 ]; then
             echo "Initial SSH attempt unsuccessful. Please read the Pre-reqs section in the README.md file."
