@@ -1,4 +1,4 @@
-name: CICD
+name: CICD Prod and Staging
 
 on: 
   push:
@@ -46,11 +46,11 @@ jobs:
       - name: Always build the monitoring stack
         run: COMPOSE_PARAMIKO_SSH=1 COMPOSE_IGNORE_ORPHANS=1 docker-compose --context remote -f docker-compose-monitoring.yml up --build -d
 
-  build_and_deploy_app:
+  build_and_deploy_prod:
+    name: Build and deploy prod env
     runs-on: ubuntu-latest
-    env:
-      STAGING_PREFIX: ""
-      STAGING_SUFFIX: ""
+    concurrency: prod
+    if: github.ref == 'refs/heads/main'
     steps:
       - uses: actions/checkout@v2
 
@@ -67,21 +67,6 @@ jobs:
           cp custom/traefik.htpasswd.example traefik/traefik.htpasswd
           sed -i "s|REPLACE_ME_WEB_AUTH_USER|${{ secrets.T_HTUSER }}|g" traefik/traefik.htpasswd
           sed -i "s|REPLACE_ME_WEB_AUTH_BCRYPT_PASSWORD|${{ secrets.T_HTPASSWD }}|g" traefik/traefik.htpasswd
-
-
-      - name: Sets env vars for db and bot staging env files
-        run: |
-          cp custom/bot_staging.env.example custom/bot_staging.env
-          cp custom/db_staging.env.example custom/db_staging.env
-
-          echo "STAGING_PREFIX=${{ secrets.STAGING_PREFIX }}" >> $GITHUB_ENV
-          echo "STAGING_SUFFIX=_staging" >> $GITHUB_ENV
-          sed -i "s|REPLACE_ME_DB_STAGING_ROOT_PASS|${{ secrets.DB_STAGING_ROOT_PASS }}|g" custom/db_staging.env custom/bot_staging.env
-          sed -i "s|REPLACE_ME_DB_STAGING_NAME|${{ secrets.DB_STAGING_NAME }}|g" custom/db_staging.env custom/bot_staging.env
-          sed -i "s|REPLACE_ME_DB_STAGING_USER_PASS|${{ secrets.DB_STAGING_USER_PASS }}|g" custom/db_staging.env custom/bot_staging.env
-          sed -i "s|REPLACE_ME_DB_STAGING_USER|${{ secrets.DB_STAGING_USER }}|g" custom/db_staging.env custom/bot_staging.env
-          sed -i "s|REPLACE_ME_DB_STAGING_PORT|${{ secrets.DB_STAGING_PORT }}|g" custom/bot_staging.env
-        if: github.ref == 'refs/heads/staging'
       
       - name: Setup SSH stuff
         run: |
@@ -108,7 +93,6 @@ jobs:
           cp custom/user.sql.example mariadb/initscripts/user.sql
           sed -i "s|REPLACE_ME_DB_NAME|${{ secrets.DB_NAME }}|g" mariadb/initscripts/*.sql
           sed -i "s|REPLACE_ME_EXPORTER_PASS|${{ secrets.EXPORTER_PASS }}|g" mariadb/initscripts/*.sql
-        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/staging'
 
       - name: Install docker-compose
         run: pip install docker-compose
@@ -121,8 +105,61 @@ jobs:
 
       - name: Build the prod stack
         run: COMPOSE_PARAMIKO_SSH=1 COMPOSE_IGNORE_ORPHANS=1 docker-compose --context remote up --build -d
-        if: github.ref == 'refs/heads/main'
+
+
+# START_STAGING_HERE
+  build_and_deploy_staging:
+    name: Build and deploy staging env
+    runs-on: ubuntu-latest
+    concurrency: prod
+    if: github.ref == 'refs/heads/staging'
+    env:
+      STAGING_PREFIX: ""
+      STAGING_SUFFIX: ""
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Update Docker Compose URLs
+        run: |
+          sed -i "s|REPLACE_ME_DOMAIN|${{ secrets.DOMAIN }}|g" custom/traefik.env docker-compose*
+
+      - name: Sets env vars for db and bot staging env files
+        run: |
+          cp custom/bot_staging.env.example custom/bot_staging.env
+          cp custom/db_staging.env.example custom/db_staging.env
+
+          echo "STAGING_PREFIX=${{ secrets.STAGING_PREFIX }}" >> $GITHUB_ENV
+          echo "STAGING_SUFFIX=_staging" >> $GITHUB_ENV
+          sed -i "s|REPLACE_ME_DB_STAGING_ROOT_PASS|${{ secrets.DB_STAGING_ROOT_PASS }}|g" custom/db_staging.env custom/bot_staging.env
+          sed -i "s|REPLACE_ME_DB_STAGING_NAME|${{ secrets.DB_STAGING_NAME }}|g" custom/db_staging.env custom/bot_staging.env
+          sed -i "s|REPLACE_ME_DB_STAGING_USER_PASS|${{ secrets.DB_STAGING_USER_PASS }}|g" custom/db_staging.env custom/bot_staging.env
+          sed -i "s|REPLACE_ME_DB_STAGING_USER|${{ secrets.DB_STAGING_USER }}|g" custom/db_staging.env custom/bot_staging.env
+          sed -i "s|REPLACE_ME_DB_STAGING_PORT|${{ secrets.DB_STAGING_PORT }}|g" custom/bot_staging.env
       
+      - name: Setup SSH stuff
+        run: |
+          mkdir -p ~/.ssh/
+          echo "${{ secrets.SSH_KEY }}" >> ~/.ssh/ssh_key
+          echo "${{ secrets.KNOWN_HOSTS }}" >> ~/.ssh/known_hosts
+          chmod 0400 ~/.ssh/ssh_key
+          echo -e "Host ${{ secrets.SSH_HOST }}\n\tHostName ${{ secrets.SSH_HOST }}\n\tUser ${{ secrets.SSH_USER }}\n\tIdentityFile ~/.ssh/ssh_key" >> ~/.ssh/config
+
+      - name: Save db init scripts
+        run: |
+          cp custom/table.sql.example mariadb/initscripts/table.sql
+          cp custom/user.sql.example mariadb/initscripts/user.sql
+          sed -i "s|REPLACE_ME_DB_NAME|${{ secrets.DB_NAME }}|g" mariadb/initscripts/*.sql
+          sed -i "s|REPLACE_ME_EXPORTER_PASS|${{ secrets.EXPORTER_PASS }}|g" mariadb/initscripts/*.sql
+
+      - name: Install docker-compose
+        run: pip install docker-compose
+      
+      - name: Create context for docker host
+        run: docker context create remote --docker "host=ssh://${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:${{ secrets.SSH_PORT }}"
+      
+      - name: Set default context for docker
+        run: docker context use remote
+
       - name: Build the staging stack
         run: COMPOSE_PARAMIKO_SSH=1 COMPOSE_IGNORE_ORPHANS=1 docker-compose --context remote -f docker-compose-staging.yml up --build -d
         if: github.ref == 'refs/heads/staging'
