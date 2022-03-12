@@ -87,8 +87,8 @@ jobs:
         run: |
           cp custom/table.sql.example mariadb/initscripts/table.sql
           cp custom/user.sql.example mariadb/initscripts/user.sql
-          sed -i "s|REPLACE_ME_DB_NAME|${{ secrets.DB_NAME }}|g" initscripts/*.sql
-          sed -i "s|REPLACE_ME_EXPORTER_PASS|${{ secrets.EXPORTER_PASS }}|g" initscripts/*.sql
+          sed -i "s|REPLACE_ME_DB_NAME|${{ secrets.DB_NAME }}|g" mariadb/initscripts/*.sql
+          sed -i "s|REPLACE_ME_EXPORTER_PASS|${{ secrets.EXPORTER_PASS }}|g" mariadb/initscripts/*.sql
         if: github.ref == 'refs/heads/main'
 
       - name: Install docker-compose
