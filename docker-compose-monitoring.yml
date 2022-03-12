@@ -250,5 +250,6 @@ networks:
     name: world
 
 volumes:
+  certs:
   prometheus_data:
   grafana_storage:

@@ -82,7 +82,6 @@ services:
 
 volumes:
   mysql-data:
-  certs:
 
 networks:
   backend_prod:
