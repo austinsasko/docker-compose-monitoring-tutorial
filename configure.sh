@@ -371,7 +371,7 @@ function print_creds () {
         fi
         gh auth login
         gh secret set -f gh.env
-        #rm -f gh.env
+        rm -f gh.env
     else
         echo -e "\n-- ACTION REQUIRED --"
         echo "If you want a fully functional automated GH Workflow (CICD), add the following secrets to the repo"
